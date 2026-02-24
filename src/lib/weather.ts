@@ -215,7 +215,32 @@ async function fetchOpenWeather(lat: number, lon: number): Promise<WeatherData> 
 // ---------------------------------------------------------------------------
 
 async function fetchCustomSource(url: string, lon: number): Promise<WeatherData> {
-  const res = await fetch(url, { next: { revalidate: 300 } });
+  // Validate URL to prevent SSRF — only allow HTTPS with public hostnames
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error("Invalid custom source URL");
+  }
+  if (parsed.protocol !== "https:") {
+    throw new Error("Custom source URL must use HTTPS");
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "0.0.0.0" ||
+    host.startsWith("10.") ||
+    host.startsWith("192.168.") ||
+    host.startsWith("172.") ||
+    host.endsWith(".local") ||
+    host.endsWith(".internal") ||
+    host === "[::1]"
+  ) {
+    throw new Error("Custom source URL must point to a public host");
+  }
+
+  const res = await fetch(parsed.toString(), { next: { revalidate: 300 } });
   if (!res.ok) throw new Error(`Custom source fetch failed: ${res.status}`);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data: any = await res.json();
