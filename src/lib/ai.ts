@@ -1,0 +1,100 @@
+/**
+ * AI styling logic.
+ * Builds a prompt from weather data + closet items, then calls the OpenAI API.
+ */
+
+import OpenAI from "openai";
+import { WeatherData } from "./weather";
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const DEFAULT_SYSTEM_PROMPT = `You are Sky Style — an expert personal stylist and meteorologist.
+Given weather conditions and a user's wardrobe, recommend a specific outfit.
+Your response MUST be a JSON object with exactly two keys:
+  "outfit": a concise outfit recommendation (max 60 words)
+  "reasoning": a brief explanation linking weather facts to clothing choices (max 80 words)
+
+Be specific (name garment types, colours, materials). Be friendly and concise.`;
+
+export interface StyleRecommendation {
+  outfit: string;
+  reasoning: string;
+}
+
+export interface StyleInput {
+  weather: WeatherData;
+  closetItems: string[];
+  unitPreference: "metric" | "imperial";
+  customSystemPrompt?: string;
+}
+
+function formatTemp(celsius: number, unit: "metric" | "imperial"): string {
+  if (unit === "imperial") {
+    const f = Math.round((celsius * 9) / 5 + 32);
+    return `${f}°F`;
+  }
+  return `${celsius}°C`;
+}
+
+function formatWind(kmh: number, unit: "metric" | "imperial"): string {
+  if (unit === "imperial") {
+    const mph = Math.round(kmh * 0.621371);
+    return `${mph} mph`;
+  }
+  return `${kmh} km/h`;
+}
+
+export async function getStyleRecommendation(
+  input: StyleInput
+): Promise<StyleRecommendation> {
+  const { weather, closetItems, unitPreference, customSystemPrompt } = input;
+  const systemPrompt = customSystemPrompt ?? DEFAULT_SYSTEM_PROMPT;
+
+  const closetSection =
+    closetItems.length > 0
+      ? `\nUser's available wardrobe:\n${closetItems.map((i) => `- ${i}`).join("\n")}`
+      : "\nUser has not added any wardrobe items — suggest general clothing.";
+
+  const alertSection =
+    weather.alerts.length > 0
+      ? `\n⚠️ Active weather alerts: ${weather.alerts.join("; ")}`
+      : "";
+
+  const userMessage = `Current weather conditions:
+- Temperature: ${formatTemp(weather.temp, unitPreference)} (feels like ${formatTemp(weather.feelsLike, unitPreference)})
+- Humidity: ${weather.humidity}%
+- Wind: ${formatWind(weather.windSpeed, unitPreference)} from ${weather.windDir}
+- Conditions: ${weather.description}
+- Rain chance: ${weather.rainChance}%
+- UV Index: ${weather.uvIndex}
+- Time of day: ${weather.isDay ? "Daytime" : "Night-time"}
+- Data source: ${weather.source} (station: ${weather.stationName}, ${weather.stationDistanceKm} km away — accuracy: ${weather.accuracyScore})${alertSection}${closetSection}
+
+Please recommend an outfit.`;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userMessage },
+    ],
+    response_format: { type: "json_object" },
+    max_tokens: 300,
+    temperature: 0.7,
+  });
+
+  const raw = response.choices[0]?.message?.content ?? "{}";
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<StyleRecommendation>;
+    return {
+      outfit: parsed.outfit ?? "Unable to generate outfit recommendation.",
+      reasoning: parsed.reasoning ?? "",
+    };
+  } catch {
+    return {
+      outfit: "Unable to generate outfit recommendation.",
+      reasoning: raw,
+    };
+  }
+}
