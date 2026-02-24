@@ -83,7 +83,9 @@ export default function DemoLocationPicker({ onLocationResolved }: Props) {
         try {
           const data = await res.json();
           errorMessage = data.error ?? errorMessage;
-        } catch {}
+        } catch (e) {
+          console.error("Failed to parse error response:", e);
+        }
         setSearchError(errorMessage);
       } else {
         const data = await res.json();

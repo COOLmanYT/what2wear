@@ -294,8 +294,9 @@ export async function getWeather(
   if (isAustralia(lat, lon)) {
     try {
       return await fetchBom(lat, lon);
-    } catch {
+    } catch (err) {
       // BOM may be unreachable from cloud environments; fall back to OpenWeather
+      console.warn("BOM fetch failed, falling back to OpenWeather:", err);
       return fetchOpenWeather(lat, lon);
     }
   }

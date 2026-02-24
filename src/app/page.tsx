@@ -56,7 +56,9 @@ export default function Home() {
         try {
           const data = await res.json();
           errorMessage = data.error ?? errorMessage;
-        } catch {}
+        } catch (e) {
+          console.error("Failed to parse error response:", e);
+        }
         setError(errorMessage);
       } else {
         const data = await res.json();
