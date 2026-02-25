@@ -2,15 +2,26 @@
 -- Sky Style — Supabase (Postgres) Schema
 -- ============================================================
 -- Run this in your Supabase SQL Editor to create all tables.
--- This creates the base Auth.js (NextAuth) tables used by
--- @auth/supabase-adapter, then extends them for Sky Style.
+--
+-- Section 0 creates the "next_auth" schema with the tables
+-- required by @auth/supabase-adapter (it queries next_auth.*).
+--
+-- Section 1+ creates the application tables in the default
+-- "public" schema used by the API routes.
 -- ============================================================
 
 -- ------------------------------------------------------------
 -- 0. Base Auth.js tables (required by @auth/supabase-adapter)
+--    These MUST live in the "next_auth" schema.
 -- ------------------------------------------------------------
 
-CREATE TABLE IF NOT EXISTS users (
+CREATE SCHEMA IF NOT EXISTS next_auth;
+
+GRANT USAGE ON SCHEMA next_auth TO service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA next_auth TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA next_auth GRANT ALL ON TABLES TO service_role;
+
+CREATE TABLE IF NOT EXISTS next_auth.users (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name          text,
   email         text UNIQUE,
@@ -18,9 +29,9 @@ CREATE TABLE IF NOT EXISTS users (
   image         text
 );
 
-CREATE TABLE IF NOT EXISTS accounts (
+CREATE TABLE IF NOT EXISTS next_auth.accounts (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  "userId"            uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  "userId"            uuid NOT NULL REFERENCES next_auth.users(id) ON DELETE CASCADE,
   type                text NOT NULL,
   provider            text NOT NULL,
   "providerAccountId" text NOT NULL,
@@ -34,14 +45,14 @@ CREATE TABLE IF NOT EXISTS accounts (
   UNIQUE (provider, "providerAccountId")
 );
 
-CREATE TABLE IF NOT EXISTS sessions (
+CREATE TABLE IF NOT EXISTS next_auth.sessions (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "sessionToken" text NOT NULL UNIQUE,
-  "userId"       uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  "userId"       uuid NOT NULL REFERENCES next_auth.users(id) ON DELETE CASCADE,
   expires        timestamptz NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS verification_tokens (
+CREATE TABLE IF NOT EXISTS next_auth.verification_tokens (
   identifier text NOT NULL,
   token      text NOT NULL UNIQUE,
   expires    timestamptz NOT NULL,
@@ -49,10 +60,17 @@ CREATE TABLE IF NOT EXISTS verification_tokens (
 );
 
 -- ------------------------------------------------------------
--- 1. Extend the users table with is_pro flag
+-- 1. Application "users" table (public schema) with is_pro flag
+--    API routes query public.users for app-specific data.
 -- ------------------------------------------------------------
-ALTER TABLE users
-  ADD COLUMN IF NOT EXISTS is_pro boolean NOT NULL DEFAULT false;
+CREATE TABLE IF NOT EXISTS users (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name          text,
+  email         text UNIQUE,
+  "emailVerified" timestamptz,
+  image         text,
+  is_pro        boolean NOT NULL DEFAULT false
+);
 
 -- ------------------------------------------------------------
 -- 2. Credits  (Pro users: 50 per week)
