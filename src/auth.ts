@@ -16,6 +16,7 @@ const supabaseUrl = process.env.SUPABASE_URL ?? "";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: process.env.AUTH_SECRET,
   providers: [GitHub, Google],
   adapter:
     isValidHttpUrl(supabaseUrl) && supabaseServiceKey
