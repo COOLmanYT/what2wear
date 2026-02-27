@@ -109,7 +109,7 @@ Please recommend an outfit.`;
     raw = response.choices[0]?.message?.content ?? "{}";
   } else if (process.env.GEMINI_API_KEY) {
     const model = getGemini().getGenerativeModel({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash-lite",
       generationConfig: { responseMimeType: "application/json", maxOutputTokens: 300 },
     });
     const result = await model.generateContent(`${systemPrompt}\n\n${userMessage}`);
