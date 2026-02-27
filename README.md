@@ -1,65 +1,46 @@
-# what2wear
-A cool vibe-coded weather website that tells you what to wear!
+# what2wear (Sky Style) 🌤️
 
-## Deploying to Vercel
+AI-powered outfit recommendations based on hyper-local weather data. Never overdress or underdress again.
 
-### 1. Set up external services
+## Features
 
-Before deploying, create accounts and obtain credentials for:
+- **Multi-source weather** — aggregates data from OpenWeatherMap, Open-Meteo, and Bureau of Meteorology (Australia) for accuracy, with hourly forecasts
+- **AI outfit recommendations** — uses OpenAI GPT-4o or Google Gemini to suggest what to wear
+- **Follow-ups** — ask follow-up questions like "should I bring an umbrella?" or "what if I need formal shoes?"
+- **Digital closet** — add your wardrobe items so the AI knows what you own
+- **Bring Your Own Key** — Pro users can use their own AI API key (never stored)
+- **Custom weather sources** — Pro users can add their own weather data sources
+- **GPS & manual location** — use your browser's location or search for any city
+- **Dark mode** — automatic, based on system preference
 
-| Service | Purpose | Link |
-|---|---|---|
-| [Supabase](https://supabase.com) | Database & auth adapter | [Dashboard](https://supabase.com/dashboard) |
-| [GitHub OAuth App](https://github.com/settings/developers) | Sign-in with GitHub | New OAuth App |
-| [Google OAuth App](https://console.cloud.google.com/) | Sign-in with Google | APIs & Services → Credentials |
-| [OpenAI](https://platform.openai.com) | AI outfit recommendations | API Keys |
-| [OpenWeatherMap](https://openweathermap.org/api) | Weather data (non-Australia) | Free tier |
+## Plans
 
-### 2. Create the Supabase database
+| | Free | Pro Monthly | Pro Lifetime |
+|---|---|---|---|
+| Price | A$0 | A$4/mo | A$30 once |
+| AI uses | 5/day | 50 credits/week | 50 credits/week |
+| Follow-ups | 10/day | 100/day | 100/day |
+| Closet | 1 use/day | Unlimited | Unlimited |
+| Source picker | 1/day | Unlimited | Unlimited |
+| BYOK AI key | — | ✅ | ✅ |
+| Custom prompts | — | ✅ | ✅ |
+| Imperial units | — | ✅ | ✅ |
 
-1. Create a new Supabase project.
-2. In the Supabase **SQL Editor**, run the contents of [`supabase/schema.sql`](supabase/schema.sql) to create all required tables.
+## Tech stack
 
-### 3. Configure OAuth redirect URIs
+- [Next.js](https://nextjs.org) 16 (App Router + Turbopack)
+- [Supabase](https://supabase.com) (Postgres + Auth adapter)
+- [NextAuth v5](https://authjs.dev) (GitHub + Google OAuth)
+- [OpenAI](https://openai.com) / [Google Gemini](https://ai.google.dev) (AI)
+- [OpenWeatherMap](https://openweathermap.org) + [Open-Meteo](https://open-meteo.com) (weather)
+- [Tailwind CSS](https://tailwindcss.com) 4
+- [Vercel](https://vercel.com) (hosting + analytics)
 
-- **GitHub** — set *Homepage URL* to `https://<your-domain>` and *Authorization callback URL* to `https://<your-domain>/api/auth/callback/github`
-- **Google** — add `https://<your-domain>/api/auth/callback/google` as an *Authorised redirect URI*
+## Getting started
 
-### 4. Deploy to Vercel
+See **[SETUP.md](SETUP.md)** for full deployment and local development instructions.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/COOLmanYT/what2wear)
-
-Or manually:
-
-```bash
-npm i -g vercel
-vercel
-```
-
-### 5. Add environment variables
-
-In your Vercel project go to **Settings → Environment Variables** and add every variable listed in [`.env.example`](.env.example):
-
-| Variable | Where to find it |
-|---|---|
-| `AUTH_SECRET` | Run `npx auth secret` locally and copy the output |
-| `AUTH_URL` | Your deployment URL, e.g. `https://your-domain.vercel.app` |
-| `AUTH_GITHUB_ID` | GitHub OAuth App → Client ID |
-| `AUTH_GITHUB_SECRET` | GitHub OAuth App → Client Secret |
-| `AUTH_GOOGLE_ID` | Google OAuth App → Client ID |
-| `AUTH_GOOGLE_SECRET` | Google OAuth App → Client Secret |
-| `SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → `service_role` secret |
-| `OPENAI_API_KEY` | OpenAI → API Keys |
-| `OPENWEATHER_API_KEY` | OpenWeatherMap → My API Keys |
-
-### 6. Redeploy
-
-After saving the environment variables, trigger a redeployment from the Vercel dashboard so the new values take effect.
-
----
-
-## Local development
+Quick start:
 
 ```bash
 cp .env.example .env.local
@@ -67,3 +48,29 @@ cp .env.example .env.local
 npm install
 npm run dev
 ```
+
+## Security
+
+- **SSRF protection** — custom weather source URLs are validated against private/internal hosts
+- **HTTPS only** — custom source URLs must use HTTPS
+- **No secrets in client** — all API keys are server-side only
+- **BYOK keys are never stored** — user-provided AI API keys are used for the single request and discarded
+- **Row Level Security** — Supabase RLS policies restrict data access to the owning user
+- **JWT sessions** — NextAuth uses JWT strategy; the database adapter is wrapped in a safe fallback
+- **Input validation** — coordinates, API inputs, and user content are validated before use
+- **Rate limiting** — daily usage limits prevent abuse of AI and weather APIs
+
+## Contributing
+
+Issues and pull requests are welcome. Please be respectful and follow the [People First Design](https://github.com/COOLmanYT/people-first-design) principles.
+
+## Legal
+
+- [Terms of Service](/terms)
+- [Privacy Policy](/privacy)
+
+Both follow the [People First Design](https://github.com/COOLmanYT/people-first-design) principles — plain language, minimum data collection, no dark patterns.
+
+## License
+
+See [LICENSE](LICENSE).

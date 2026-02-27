@@ -74,7 +74,9 @@ export default async function LoginPage() {
         </form>
 
         <p className="mt-6 text-xs" style={{ color: "var(--foreground)", opacity: 0.4 }}>
-          By continuing, you agree to our terms of service.
+          By continuing, you agree to our{" "}
+          <a href="/terms" className="underline">terms of service</a> and{" "}
+          <a href="/privacy" className="underline">privacy policy</a>.
         </p>
       </div>
     </div>
