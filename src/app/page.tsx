@@ -18,7 +18,7 @@ interface WeatherData {
   stationName: string;
   stationDistanceKm: number;
   accuracyScore: "High" | "Medium" | "Low";
-  source: "BOM" | "OpenWeather" | "Custom";
+  source: "BOM" | "OpenWeather" | "Custom" | "Multi";
 }
 
 const ACCURACY_COLOR: Record<string, string> = {
@@ -384,7 +384,7 @@ export default function Home() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="px-6 py-16 max-w-3xl mx-auto">
+      <section id="pricing" className="px-6 py-16 max-w-4xl mx-auto">
         <h2
           className="text-2xl font-semibold text-center mb-2"
           style={{ color: "var(--foreground)" }}
@@ -398,7 +398,7 @@ export default function Home() {
           Start free, upgrade when you need more.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Free */}
           <div
             className="rounded-2xl p-6"
@@ -414,8 +414,11 @@ export default function Home() {
               A$0
             </p>
             <ul className="text-sm space-y-2" style={{ color: "var(--foreground)", opacity: 0.7 }}>
-              <li>✅ AI outfit recommendations</li>
-              <li>✅ Real-time weather data</li>
+              <li>✅ 5 AI recommendations/day</li>
+              <li>✅ 10 follow-ups/day</li>
+              <li>✅ Real-time multi-source weather</li>
+              <li>✅ Closet (1 use/day)</li>
+              <li>✅ Source picker (1/day)</li>
               <li>✅ GPS &amp; manual location</li>
               <li>✅ Metric units</li>
             </ul>
@@ -444,9 +447,12 @@ export default function Home() {
             <ul className="text-sm space-y-2 mt-4" style={{ color: "var(--foreground)", opacity: 0.7 }}>
               <li>✅ Everything in Free</li>
               <li>✅ 50 credits per week</li>
+              <li>✅ 100 follow-ups/day</li>
+              <li>✅ Unlimited closet &amp; sources</li>
               <li>✅ Custom AI prompts</li>
-              <li>✅ Imperial units</li>
+              <li>✅ Bring your own AI key</li>
               <li>✅ Custom weather sources</li>
+              <li>✅ Imperial units</li>
             </ul>
           </div>
 
@@ -469,6 +475,36 @@ export default function Home() {
               <li>✅ One-time payment</li>
               <li>✅ Lifetime updates</li>
               <li>✅ Priority support</li>
+            </ul>
+          </div>
+
+          {/* Pay As You Go */}
+          <div
+            className="rounded-2xl p-6 relative"
+            style={{
+              background: "var(--card)",
+              border: "1px dashed var(--card-border)",
+              opacity: 0.75,
+            }}
+          >
+            <span
+              className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-medium px-3 py-1 rounded-full"
+              style={{ background: "var(--foreground)", color: "var(--background)", opacity: 0.6 }}
+            >
+              Coming one day
+            </span>
+            <h3 className="font-semibold mb-1" style={{ color: "var(--foreground)" }}>
+              Pay As You Go
+            </h3>
+            <p className="text-3xl font-bold mb-1" style={{ color: "var(--foreground)" }}>
+              A$?<span className="text-sm font-normal opacity-60">/use</span>
+            </p>
+            <ul className="text-sm space-y-2 mt-4" style={{ color: "var(--foreground)", opacity: 0.7 }}>
+              <li>💡 Select what you want</li>
+              <li>💰 Pay only for what you use</li>
+              <li>🚫 No more overpaying</li>
+              <li>⚡ Priority support</li>
+              <li>📸 Image Upload add-on</li>
             </ul>
           </div>
         </div>
@@ -496,7 +532,26 @@ export default function Home() {
         className="px-6 py-6 text-center text-xs"
         style={{ color: "var(--foreground)", opacity: 0.3 }}
       >
-        © {new Date().getFullYear()} Sky Style. Built with Next.js, Supabase &amp; OpenAI.
+        <p>© {new Date().getFullYear()} Sky Style. Built with Next.js, Supabase &amp; OpenAI.</p>
+        <p className="mt-1">
+          <Link
+            href="https://github.com/COOLmanYT/what2wear"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:opacity-70"
+            style={{ color: "var(--foreground)" }}
+          >
+            GitHub
+          </Link>
+          {" · "}
+          <Link href="/terms" className="underline hover:opacity-70" style={{ color: "var(--foreground)" }}>
+            Terms of Service
+          </Link>
+          {" · "}
+          <Link href="/privacy" className="underline hover:opacity-70" style={{ color: "var(--foreground)" }}>
+            Privacy Policy
+          </Link>
+        </p>
       </footer>
     </div>
   );
