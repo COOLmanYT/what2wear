@@ -57,6 +57,22 @@ const ACCURACY_COLOR: Record<string, string> = {
   Low: "#ff3b30",
 };
 
+const SOURCE_LINKS: Record<string, string> = {
+  OpenWeather: "https://openweathermap.org/",
+  "Open-Meteo": "https://open-meteo.com/",
+  BOM: "http://www.bom.gov.au/",
+  WeatherAPI: "https://www.weatherapi.com/",
+  VisualCrossing: "https://www.visualcrossing.com/",
+  PirateWeather: "https://pirateweather.net/",
+};
+
+const MAX_GENDER_LENGTH = 30;
+
+/** Returns true if the given option string matches the current gender state */
+function isGenderActive(option: string, gender: string): boolean {
+  return (option === "Other" && gender === "N/A") || gender === option;
+}
+
 interface DashboardProps {
   userName: string;
   userEmail: string;
@@ -80,6 +96,9 @@ export default function Dashboard({
   const [followUpLoading, setFollowUpLoading] = useState(false);
   const [followUpError, setFollowUpError] = useState<string | null>(null);
   const [dailyLimits, setDailyLimits] = useState<DailyLimits | null>(initialDailyLimits);
+  const [gender, setGender] = useState<string>("N/A");
+  const [customGender, setCustomGender] = useState("");
+  const [shareLocation, setShareLocation] = useState(false);
 
   const creditsRemaining = result?.meta?.creditsRemaining ?? initialCredits;
 
@@ -91,10 +110,11 @@ export default function Dashboard({
     setFollowUpText("");
     setFollowUpError(null);
     try {
+      const effectiveGender = gender === "Other - Manual" ? customGender.slice(0, MAX_GENDER_LENGTH) : gender;
       const res = await fetch("/api/style", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lat: loc.lat, lon: loc.lon }),
+        body: JSON.stringify({ lat: loc.lat, lon: loc.lon, gender: effectiveGender, shareLocation }),
       });
       if (!res.ok) {
         let errorMessage = "Something went wrong.";
@@ -172,7 +192,7 @@ export default function Dashboard({
       style={{ background: "var(--background)" }}
     >
       <div className="flex-1 px-4 py-10">
-        <div className="mx-auto max-w-lg space-y-5">
+        <div className="mx-auto max-w-2xl space-y-5">
           {/* ── Heading ── */}
           <div className="flex items-center justify-between">
             <div>
@@ -206,6 +226,73 @@ export default function Dashboard({
 
           {/* ── Location Picker ── */}
           <LocationPicker onLocationResolved={handleLocationResolved} />
+
+          {/* ── Gender & Location Consent ── */}
+          <div
+            className="rounded-2xl p-4 space-y-3"
+            style={{
+              background: "var(--card)",
+              border: "1px solid var(--card-border)",
+            }}
+          >
+            <div>
+              <p
+                className="text-xs font-semibold uppercase tracking-widest mb-2"
+                style={{ color: "var(--foreground)", opacity: 0.4 }}
+              >
+                Gender (for outfit recommendations)
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {["Male", "Female", "Other", "Other - Manual"].map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => setGender(opt === "Other" ? "N/A" : opt)}
+                    className="rounded-xl px-3 py-1.5 text-xs font-medium transition-opacity"
+                    style={{
+                      background: isGenderActive(opt, gender)
+                        ? "var(--accent)"
+                        : "var(--background)",
+                      color: isGenderActive(opt, gender)
+                        ? "#fff"
+                        : "var(--foreground)",
+                      border: "1px solid var(--card-border)",
+                    }}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+              {gender === "Other - Manual" && (
+                <input
+                  type="text"
+                  value={customGender}
+                  onChange={(e) => setCustomGender(e.target.value.slice(0, MAX_GENDER_LENGTH))}
+                  placeholder={`Type your gender (max ${MAX_GENDER_LENGTH} chars)`}
+                  maxLength={MAX_GENDER_LENGTH}
+                  className="mt-2 w-full rounded-xl px-3 py-2 text-xs outline-none"
+                  style={{
+                    background: "var(--background)",
+                    color: "var(--foreground)",
+                    border: "1px solid var(--card-border)",
+                  }}
+                />
+              )}
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={shareLocation}
+                onChange={(e) => setShareLocation(e.target.checked)}
+                className="rounded"
+              />
+              <span
+                className="text-xs"
+                style={{ color: "var(--foreground)", opacity: 0.6 }}
+              >
+                Share my location with AI for more relevant recommendations
+              </span>
+            </label>
+          </div>
 
           {location && (
             <div
@@ -342,6 +429,42 @@ export default function Dashboard({
                       <> — averaged from {w!.sources.map((s) => s.source).join(", ")}</>
                     )}
                   </span>
+                </div>
+
+                {/* Weather source attribution */}
+                <div className="pt-1">
+                  <p
+                    className="text-xs"
+                    style={{ color: "var(--foreground)", opacity: 0.35 }}
+                  >
+                    Data from{" "}
+                    {[...new Set([
+                      ...(w!.sources ?? []).map((s) => s.source),
+                      ...(w!.sources ? [] : [w!.source]),
+                    ])]
+                      .map((name) => {
+                        const link = SOURCE_LINKS[name];
+                        return link ? (
+                          <a
+                            key={name}
+                            href={link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline hover:opacity-70"
+                            style={{ color: "var(--foreground)" }}
+                          >
+                            {name}
+                          </a>
+                        ) : (
+                          <span key={name}>{name}</span>
+                        );
+                      })
+                      .reduce<React.ReactNode[]>((acc, el, i) => {
+                        if (i > 0) acc.push(<span key={`sep-${i}`}>, </span>);
+                        acc.push(el);
+                        return acc;
+                      }, [])}
+                  </p>
                 </div>
 
                 {/* Hourly forecast preview */}

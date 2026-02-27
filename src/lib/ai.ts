@@ -47,6 +47,10 @@ export interface StyleInput {
   customSystemPrompt?: string;
   /** Pro BYOK: user-provided AI API key (not saved, used for this request only) */
   userApiKey?: string;
+  /** Gender context for recommendations (e.g. "Male", "Female", "N/A", or custom text) */
+  gender?: string;
+  /** Whether the user consented to share their location with the AI */
+  shareLocation?: boolean;
 }
 
 export interface FollowUpInput {
@@ -83,7 +87,7 @@ function formatWind(kmh: number, unit: "metric" | "imperial"): string {
 export async function getStyleRecommendation(
   input: StyleInput
 ): Promise<StyleRecommendation> {
-  const { weather, closetItems, unitPreference, customSystemPrompt, userApiKey } = input;
+  const { weather, closetItems, unitPreference, customSystemPrompt, userApiKey, gender, shareLocation } = input;
   const systemPrompt = customSystemPrompt ?? DEFAULT_SYSTEM_PROMPT;
 
   const closetSection =
@@ -119,6 +123,17 @@ export async function getStyleRecommendation(
       .join("\n")}`;
   }
 
+  // Gender context — sanitize to prevent prompt injection
+  const safeGender = gender ? gender.replace(/[\n\r]/g, " ").slice(0, 30) : undefined;
+  const genderSection = safeGender && safeGender !== "N/A"
+    ? `\n- Gender: ${safeGender}`
+    : "";
+
+  // Location info — only include if user consented
+  const locationSection = shareLocation
+    ? `\n- Data source: ${weather.source} (station: ${weather.stationName}, ${weather.stationDistanceKm} km away — accuracy: ${weather.accuracyScore})`
+    : `\n- Data source: ${weather.source} (accuracy: ${weather.accuracyScore})`;
+
   const userMessage = `Current weather conditions (averaged across sources):
 - Temperature: ${formatTemp(weather.temp, unitPreference)} (feels like ${formatTemp(weather.feelsLike, unitPreference)})
 - Humidity: ${weather.humidity}%
@@ -126,8 +141,7 @@ export async function getStyleRecommendation(
 - Conditions: ${weather.description}
 - Rain chance: ${weather.rainChance}%
 - UV Index: ${weather.uvIndex}
-- Time of day: ${weather.isDay ? "Daytime" : "Night-time"}
-- Data source: ${weather.source} (station: ${weather.stationName}, ${weather.stationDistanceKm} km away — accuracy: ${weather.accuracyScore})${alertSection}${sourcesSection}${hourlySection}${closetSection}
+- Time of day: ${weather.isDay ? "Daytime" : "Night-time"}${genderSection}${locationSection}${alertSection}${sourcesSection}${hourlySection}${closetSection}
 
 Please recommend an outfit.`;
 

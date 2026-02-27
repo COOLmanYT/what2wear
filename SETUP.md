@@ -24,6 +24,7 @@ Before deploying, create accounts and obtain credentials for:
 |---|---|---|
 | [WeatherAPI.com](https://www.weatherapi.com/) | Additional weather source | Free tier |
 | [Visual Crossing](https://www.visualcrossing.com/) | Additional weather source | Free tier |
+| [Pirate Weather](https://pirateweather.net/) | Additional weather source | Free tier |
 
 ### 2. Create the Supabase database
 
@@ -64,6 +65,7 @@ In your Vercel project go to **Settings → Environment Variables** and add ever
 | `OPENWEATHER_API_KEY` | OpenWeatherMap → My API Keys |
 | `WEATHERAPI_KEY` | *(optional)* WeatherAPI.com → Dashboard → API Key |
 | `VISUALCROSSING_API_KEY` | *(optional)* Visual Crossing → Account → API Key |
+| `PIRATEWEATHER_API_KEY` | *(optional)* Pirate Weather → [Request API Key](https://pirateweather.net/) |
 
 ### 6. Redeploy
 

@@ -388,6 +388,49 @@ async function fetchVisualCrossing(lat: number, lon: number): Promise<SourceWeat
 }
 
 // ---------------------------------------------------------------------------
+// Pirate Weather (requires PIRATEWEATHER_API_KEY)
+// Dark Sky-compatible API: https://pirateweather.net
+// ---------------------------------------------------------------------------
+
+async function fetchPirateWeather(lat: number, lon: number): Promise<SourceWeatherData & { hourly: HourlyForecast[] }> {
+  const key = process.env.PIRATEWEATHER_API_KEY;
+  if (!key) throw new Error("PIRATEWEATHER_API_KEY is not set");
+
+  const url = `https://api.pirateweather.net/forecast/${key}/${lat},${lon}?units=ca`;
+  const res = await fetch(url, { next: { revalidate: 600 } });
+  if (!res.ok) throw new Error(`Pirate Weather fetch failed: ${res.status}`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: any = await res.json();
+
+  const currently = data.currently ?? {};
+  const hourlyBlock = data.hourly?.data ?? [];
+
+  const hourly: HourlyForecast[] = hourlyBlock.slice(0, 24).map(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (h: any) => ({
+      time: new Date((h.time ?? 0) * 1000).toISOString(),
+      temp: Math.round(h.temperature ?? 0),
+      description: h.summary ?? "Unknown",
+      rainChance: Math.round((h.precipProbability ?? 0) * 100),
+      windSpeed: Math.round(h.windSpeed ?? 0),
+    })
+  );
+
+  return {
+    temp: Math.round(currently.temperature ?? 0),
+    feelsLike: Math.round(currently.apparentTemperature ?? currently.temperature ?? 0),
+    humidity: Math.round((currently.humidity ?? 0) * 100),
+    windSpeed: Math.round(currently.windSpeed ?? 0),
+    windDir: degreesToCardinal(currently.windBearing ?? 0),
+    description: currently.summary ?? "Unknown",
+    rainChance: Math.round((currently.precipProbability ?? 0) * 100),
+    uvIndex: Math.round(currently.uvIndex ?? 0),
+    source: "PirateWeather",
+    hourly,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Open-Meteo (free, no API key needed)
 // ---------------------------------------------------------------------------
 
@@ -523,6 +566,13 @@ export async function getWeather(
   if (process.env.VISUALCROSSING_API_KEY) {
     sourcePromises.push(
       fetchVisualCrossing(lat, lon).catch(() => null)
+    );
+  }
+
+  // Try Pirate Weather if key is available
+  if (process.env.PIRATEWEATHER_API_KEY) {
+    sourcePromises.push(
+      fetchPirateWeather(lat, lon).catch(() => null)
     );
   }
 
