@@ -887,7 +887,7 @@ export default function Dashboard({
               </div>
 
               {/* ── Outfit Recommendation ── */}
-              {rec!.outfit && (
+              {rec?.outfit && (
               <div
                 className="rounded-2xl p-5 space-y-3"
                 style={{
@@ -927,7 +927,7 @@ export default function Dashboard({
               )}
 
               {/* ── Follow-Up Input ── */}
-              {rec!.outfit && (
+              {rec?.outfit && (
               <div
                 className="rounded-2xl p-4"
                 style={{
