@@ -867,7 +867,7 @@ export default function Dashboard({
                     <span style={{ opacity: 0.7, fontWeight: "normal", textTransform: "none" }}>
                       {" "}
                       — {dailyLimits.followUps.used}/
-                      {dailyLimits.followUps.limit == null
+                      {dailyLimits.followUps.limit === null
                         ? "∞"
                         : dailyLimits.followUps.limit}{" "}
                       used today
@@ -1432,7 +1432,7 @@ export default function Dashboard({
                           limit !== null && used >= limit ? "#ff3b30" : "var(--foreground)",
                       }}
                     >
-                      {used}/{limit == null ? "∞" : limit}
+                      {used}/{limit === null ? "∞" : limit}
                     </p>
                   </div>
                 ))}
