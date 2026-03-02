@@ -516,16 +516,184 @@ function averageSources(sources: SourceWeatherData[], primary: WeatherData): Wea
 }
 
 // ---------------------------------------------------------------------------
+// RSS feed fetching (custom user source)
+// ---------------------------------------------------------------------------
+
+export interface CustomSource {
+  id: string;
+  type: "rss" | "api_key" | "url";
+  name: string;
+  value: string;
+  service?: string; // For api_key type: weatherapi, visualcrossing, pirateweather, openweather
+}
+
+export type SourceMode = "builtin" | "custom" | "both";
+
+/** Fetch and extract text content from an RSS feed URL (for weather context) */
+async function fetchRssFeed(url: string): Promise<string> {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error("Invalid RSS feed URL");
+  }
+  if (parsed.protocol !== "https:") {
+    throw new Error("RSS feed URL must use HTTPS");
+  }
+  if (isPrivateHost(parsed.hostname.toLowerCase())) {
+    throw new Error("RSS feed URL must point to a public host");
+  }
+
+  const res = await fetch(parsed.toString(), {
+    headers: { "User-Agent": "SkyStyle/1.0 (weather-stylist app)" },
+    next: { revalidate: 600 },
+  });
+  if (!res.ok) throw new Error(`RSS fetch failed: ${res.status}`);
+  const xml = await res.text();
+
+  // Simple XML text extraction — pull <title> and <description> content
+  const items: string[] = [];
+  const itemRegex = /<item[\s\S]*?<\/item>/gi;
+  const matches = xml.match(itemRegex) ?? [];
+  for (const item of matches.slice(0, 5)) {
+    const title = item.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/<!\[CDATA\[|\]\]>/g, "").trim() ?? "";
+    const desc = item.match(/<description[^>]*>([\s\S]*?)<\/description>/i)?.[1]?.replace(/<!\[CDATA\[|\]\]>/g, "").replace(/<[^>]+>/g, "").trim() ?? "";
+    if (title || desc) items.push(`${title}: ${desc}`.slice(0, 300));
+  }
+  return items.join("\n") || "No weather content found in RSS feed.";
+}
+
+/** Process custom sources and return context strings for AI and any weather source data */
+export async function processCustomSources(
+  customSources: CustomSource[],
+  lat: number,
+  lon: number
+): Promise<{ extraContext: string[]; extraWeatherSources: SourceWeatherData[] }> {
+  const extraContext: string[] = [];
+  const extraWeatherSources: SourceWeatherData[] = [];
+
+  for (const source of customSources) {
+    try {
+      switch (source.type) {
+        case "rss": {
+          const content = await fetchRssFeed(source.value);
+          extraContext.push(`[RSS: ${source.name}]\n${content}`);
+          break;
+        }
+        case "url": {
+          // URLs are NOT fetched — just sent as context reference to the AI
+          extraContext.push(`[URL Reference: ${source.name}] ${source.value}`);
+          break;
+        }
+        case "api_key": {
+          // Use the API key with the specified weather service
+          const svc = source.service ?? "";
+          if (svc === "weatherapi") {
+            const origKey = process.env.WEATHERAPI_KEY;
+            process.env.WEATHERAPI_KEY = source.value;
+            try {
+              const data = await fetchWeatherApi(lat, lon);
+              data.source = `WeatherAPI (${source.name})`;
+              extraWeatherSources.push(data);
+            } finally {
+              if (origKey) process.env.WEATHERAPI_KEY = origKey;
+              else delete process.env.WEATHERAPI_KEY;
+            }
+          } else if (svc === "visualcrossing") {
+            const origKey = process.env.VISUALCROSSING_API_KEY;
+            process.env.VISUALCROSSING_API_KEY = source.value;
+            try {
+              const data = await fetchVisualCrossing(lat, lon);
+              data.source = `VisualCrossing (${source.name})`;
+              extraWeatherSources.push(data);
+            } finally {
+              if (origKey) process.env.VISUALCROSSING_API_KEY = origKey;
+              else delete process.env.VISUALCROSSING_API_KEY;
+            }
+          } else if (svc === "pirateweather") {
+            const origKey = process.env.PIRATEWEATHER_API_KEY;
+            process.env.PIRATEWEATHER_API_KEY = source.value;
+            try {
+              const data = await fetchPirateWeather(lat, lon);
+              data.source = `PirateWeather (${source.name})`;
+              extraWeatherSources.push(data);
+            } finally {
+              if (origKey) process.env.PIRATEWEATHER_API_KEY = origKey;
+              else delete process.env.PIRATEWEATHER_API_KEY;
+            }
+          } else if (svc === "openweather") {
+            const origKey = process.env.OPENWEATHER_API_KEY;
+            process.env.OPENWEATHER_API_KEY = source.value;
+            try {
+              const data = await fetchOpenWeather(lat, lon);
+              extraWeatherSources.push({
+                temp: data.temp,
+                feelsLike: data.feelsLike,
+                humidity: data.humidity,
+                windSpeed: data.windSpeed,
+                windDir: data.windDir,
+                description: data.description,
+                rainChance: data.rainChance,
+                uvIndex: data.uvIndex,
+                source: `OpenWeather (${source.name})`,
+              });
+            } finally {
+              if (origKey) process.env.OPENWEATHER_API_KEY = origKey;
+              else delete process.env.OPENWEATHER_API_KEY;
+            }
+          }
+          break;
+        }
+      }
+    } catch (err) {
+      console.warn(`[weather] Custom source "${source.name}" failed:`, err instanceof Error ? err.message : err);
+    }
+  }
+
+  return { extraContext, extraWeatherSources };
+}
+
+// ---------------------------------------------------------------------------
 // Public entry point
 // ---------------------------------------------------------------------------
 
 export async function getWeather(
   lat: number,
   lon: number,
-  customSourceUrl?: string
-): Promise<WeatherData> {
-  if (customSourceUrl) {
+  customSourceUrl?: string,
+  sourceMode: SourceMode = "builtin",
+  customSources: CustomSource[] = []
+): Promise<WeatherData & { customContext?: string[] }> {
+  // Legacy: single custom source URL (Pro feature)
+  if (customSourceUrl && sourceMode === "builtin") {
     return fetchCustomSource(customSourceUrl, lon);
+  }
+
+  // Process user's custom sources
+  const { extraContext, extraWeatherSources } =
+    customSources.length > 0
+      ? await processCustomSources(customSources, lat, lon)
+      : { extraContext: [] as string[], extraWeatherSources: [] as SourceWeatherData[] };
+
+  // If "custom" mode and user has no fetchable weather sources, still try built-in
+  if (sourceMode === "custom" && extraWeatherSources.length === 0 && extraContext.length === 0) {
+    sourceMode = "builtin";
+  }
+
+  // "custom" mode: only use user-provided weather sources
+  if (sourceMode === "custom" && extraWeatherSources.length > 0) {
+    const primary: WeatherData = {
+      ...extraWeatherSources[0],
+      isDay: isDaytime(lon),
+      alerts: [],
+      stationName: extraWeatherSources[0].source,
+      stationDistanceKm: 0,
+      accuracyScore: "Medium",
+      source: "Custom",
+      hourly: extraWeatherSources[0].hourly,
+    };
+    const result = averageSources(extraWeatherSources, primary);
+    return { ...result, customContext: extraContext.length > 0 ? extraContext : undefined };
   }
 
   // Fetch from multiple sources in parallel for better accuracy
@@ -598,6 +766,11 @@ export async function getWeather(
   const results = await Promise.all(sourcePromises);
   const validSources = results.filter((r): r is SourceWeatherData => r !== null);
 
+  // In "both" mode, merge user's weather sources with built-in
+  if (sourceMode === "both" && extraWeatherSources.length > 0) {
+    validSources.push(...extraWeatherSources);
+  }
+
   // We need at least one source
   if (validSources.length === 0) {
     throw new Error("All weather sources failed. Please try again later.");
@@ -621,7 +794,8 @@ export async function getWeather(
     };
   }
 
-  return averageSources(validSources, primary);
+  const averaged = averageSources(validSources, primary);
+  return { ...averaged, customContext: extraContext.length > 0 ? extraContext : undefined };
 }
 
 // ---------------------------------------------------------------------------
