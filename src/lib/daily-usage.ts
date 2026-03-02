@@ -95,14 +95,18 @@ export async function incrementUsage(
   return true;
 }
 
-/** Get all daily limits info for a user (used in dashboard). */
+/** Get all daily limits info for a user (used in dashboard).
+ *  Infinite limits are returned as `null` so they survive JSON serialisation
+ *  (`JSON.stringify(Infinity)` produces `null` silently).
+ */
 export async function getDailyLimitsInfo(userId: string, isPro: boolean, isDev: boolean = false) {
   const usage = await getDailyUsage(userId);
   const tier = isDev ? "dev" : (isPro ? "pro" : "free");
+  const fmt = (v: number): number | null => (v === Infinity ? null : v);
   return {
-    ai: { used: usage.ai_uses, limit: LIMITS[tier].ai_uses },
-    followUps: { used: usage.follow_ups, limit: LIMITS[tier].follow_ups },
-    closet: { used: usage.closet_uses, limit: LIMITS[tier].closet_uses },
-    sourcePicks: { used: usage.source_picks, limit: LIMITS[tier].source_picks },
+    ai: { used: usage.ai_uses, limit: fmt(LIMITS[tier].ai_uses) },
+    followUps: { used: usage.follow_ups, limit: fmt(LIMITS[tier].follow_ups) },
+    closet: { used: usage.closet_uses, limit: fmt(LIMITS[tier].closet_uses) },
+    sourcePicks: { used: usage.source_picks, limit: fmt(LIMITS[tier].source_picks) },
   };
 }

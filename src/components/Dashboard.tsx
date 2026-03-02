@@ -55,10 +55,10 @@ interface StyleResponse {
 }
 
 interface DailyLimits {
-  ai: { used: number; limit: number };
-  followUps: { used: number; limit: number };
-  closet: { used: number; limit: number };
-  sourcePicks: { used: number; limit: number };
+  ai: { used: number; limit: number | null };
+  followUps: { used: number; limit: number | null };
+  closet: { used: number; limit: number | null };
+  sourcePicks: { used: number; limit: number | null };
 }
 
 const ACCURACY_COLOR: Record<string, string> = {
@@ -867,7 +867,7 @@ export default function Dashboard({
                     <span style={{ opacity: 0.7, fontWeight: "normal", textTransform: "none" }}>
                       {" "}
                       — {dailyLimits.followUps.used}/
-                      {dailyLimits.followUps.limit === Infinity
+                      {dailyLimits.followUps.limit == null
                         ? "∞"
                         : dailyLimits.followUps.limit}{" "}
                       used today
@@ -1429,10 +1429,10 @@ export default function Dashboard({
                       className="text-sm font-medium"
                       style={{
                         color:
-                          used >= limit ? "#ff3b30" : "var(--foreground)",
+                          limit !== null && used >= limit ? "#ff3b30" : "var(--foreground)",
                       }}
                     >
-                      {used}/{limit === Infinity ? "∞" : limit}
+                      {used}/{limit == null ? "∞" : limit}
                     </p>
                   </div>
                 ))}

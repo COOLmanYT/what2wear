@@ -17,10 +17,10 @@ export default async function DashboardPage() {
   let isDev = false;
   let initialCredits: number | null = null;
   let initialDailyLimits: {
-    ai: { used: number; limit: number };
-    followUps: { used: number; limit: number };
-    closet: { used: number; limit: number };
-    sourcePicks: { used: number; limit: number };
+    ai: { used: number; limit: number | null };
+    followUps: { used: number; limit: number | null };
+    closet: { used: number; limit: number | null };
+    sourcePicks: { used: number; limit: number | null };
   } | null = null;
 
   if (userId) {
