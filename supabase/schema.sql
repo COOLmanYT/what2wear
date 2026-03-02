@@ -65,6 +65,9 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- ------------------------------------------------------------
 -- 2. Credits  (Pro users: 50 per week)
+--    Actively used: /api/style deducts 1 credit per AI call for
+--    Pro users. Balance is shown in the dashboard and weekly
+--    reset is handled by src/lib/credits.ts.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS credits (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
