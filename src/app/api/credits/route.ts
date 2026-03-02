@@ -28,5 +28,5 @@ export async function GET() {
   }
 
   const credits = await getCredits(userId);
-  return NextResponse.json({ isPro: true, isDev, credits });
+  return NextResponse.json({ isPro, isDev, credits });
 }
