@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import LocationPicker, { ResolvedLocation } from "./LocationPicker";
+import WeatherEffectCard, { getWeatherCondition } from "./WeatherEffectCard";
 import { handleSignOut } from "@/app/actions";
 import Link from "next/link";
 
@@ -443,7 +444,8 @@ export default function Dashboard({
           <LocationPicker onLocationResolved={handleLocationResolved} />
 
           {location && (
-            <div
+            <WeatherEffectCard
+              condition={w ? getWeatherCondition(w.description) : "default"}
               className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs"
               style={{
                 background: "var(--card)",
@@ -454,7 +456,7 @@ export default function Dashboard({
             >
               <span>{location.source === "gps" ? "📍" : "🔍"}</span>
               <span className="truncate">{location.displayName}</span>
-            </div>
+            </WeatherEffectCard>
           )}
 
           {/* ── Loading ── */}
@@ -493,7 +495,8 @@ export default function Dashboard({
           {/* ── Main Weather Card ── */}
           {result && !loading && (
             <>
-              <div
+              <WeatherEffectCard
+                condition={getWeatherCondition(w!.description)}
                 className="rounded-2xl p-5 space-y-3"
                 style={{
                   background: "var(--card)",
@@ -786,11 +789,12 @@ export default function Dashboard({
                     </div>
                   </div>
                 )}
-              </div>
+              </WeatherEffectCard>
 
               {/* ── Outfit Recommendation ── */}
               {rec?.outfit && (
-              <div
+              <WeatherEffectCard
+                condition={getWeatherCondition(w!.description)}
                 className="rounded-2xl p-5 space-y-3"
                 style={{
                   background: "var(--card)",
@@ -846,7 +850,7 @@ export default function Dashboard({
                     </pre>
                   </>
                 )}
-              </div>
+              </WeatherEffectCard>
               )}
 
               {/* ── Follow-Up Input ── */}
