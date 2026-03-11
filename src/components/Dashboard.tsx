@@ -496,7 +496,7 @@ export default function Dashboard({
           {result && !loading && (
             <>
               <WeatherEffectCard
-                condition={getWeatherCondition(w!.description)}
+                condition={getWeatherCondition(w?.description ?? "")}
                 className="rounded-2xl p-5 space-y-3"
                 style={{
                   background: "var(--card)",
@@ -794,7 +794,7 @@ export default function Dashboard({
               {/* ── Outfit Recommendation ── */}
               {rec?.outfit && (
               <WeatherEffectCard
-                condition={getWeatherCondition(w!.description)}
+                condition={getWeatherCondition(w?.description ?? "")}
                 className="rounded-2xl p-5 space-y-3"
                 style={{
                   background: "var(--card)",

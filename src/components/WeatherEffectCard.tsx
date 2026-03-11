@@ -23,7 +23,7 @@ export function getWeatherCondition(description: string): WeatherCondition {
   return "default";
 }
 
-/** Deterministic pseudo-random from seed (0-1 range). */
+/** Deterministic pseudo-random from seed (0-1 range), using a simple LCG hash. */
 function seededRandom(seed: number): number {
   const x = Math.sin(seed * 9301 + 49297) * 49999;
   return x - Math.floor(x);
