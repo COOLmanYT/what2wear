@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import LocationPicker, { ResolvedLocation } from "./LocationPicker";
-import WeatherEffectCard, { getWeatherCondition, formatHourlyTime, HOURLY_FORECAST_LIMIT } from "./WeatherEffectCard";
+import WeatherEffectCard, { getWeatherCondition, formatHourlyTime, isHourlyCurrentOrFuture, HOURLY_FORECAST_LIMIT } from "./WeatherEffectCard";
 import { handleSignOut } from "@/app/actions";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+type LayoutMode = "symmetric" | "large-weather" | "large-settings";
 
 interface HourlyForecast {
   time: string;
@@ -123,6 +126,18 @@ export default function Dashboard({
   const [devChatError, setDevChatError] = useState<string | null>(null);
   const [devChatResult, setDevChatResult] = useState<{ outfit: string; reasoning: string; rawOutput?: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const router = useRouter();
+
+  // Layout preferences (loaded from localStorage)
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>("large-weather");
+  const [extraSpacingEnabled, setExtraSpacingEnabled] = useState(false);
+  const [customSpacingEnabled, setCustomSpacingEnabled] = useState(false);
+  // Ratio: left column flex relative to right (right is always flex-1)
+  const [customRatio, setCustomRatio] = useState(1.5);
+  const customRatioRef = useRef(1.5);
+  const isDraggingRef = useRef(false);
+  const columnsContainerRef = useRef<HTMLDivElement>(null);
+  const dragStartRef = useRef({ x: 0, ratio: 1.5, containerWidth: 1000 });
 
   // Custom weather sources (stored in localStorage)
   type SourceMode = "builtin" | "custom" | "both";
@@ -210,6 +225,34 @@ export default function Dashboard({
         /* ignore */
       }
     })();
+
+    // Load preferences saved from the Settings page (localStorage)
+    try {
+      const savedGender = localStorage.getItem("skystyle_gender");
+      if (savedGender) setGender(savedGender);
+      const savedCustomGender = localStorage.getItem("skystyle_custom_gender");
+      if (savedCustomGender) setCustomGender(savedCustomGender);
+      const savedLocationConsent = localStorage.getItem("skystyle_location_consent");
+      if (savedLocationConsent !== null) setShareLocation(savedLocationConsent === "true");
+      const savedWeatherOnly = localStorage.getItem("skystyle_weather_only");
+      if (savedWeatherOnly !== null) setWeatherOnly(savedWeatherOnly === "true");
+
+      // Layout preferences
+      const savedLayoutMode = localStorage.getItem("skystyle_layout_mode") as LayoutMode | null;
+      if (savedLayoutMode) setLayoutMode(savedLayoutMode);
+
+      const extraEnabled = localStorage.getItem("skystyle_extra_spacing") === "true";
+      const extraPages = (localStorage.getItem("skystyle_extra_spacing_pages") ?? "dashboard").split(",");
+      if (extraEnabled && extraPages.includes("dashboard")) setExtraSpacingEnabled(true);
+
+      const customEnabled = localStorage.getItem("skystyle_custom_spacing") === "true";
+      if (customEnabled) setCustomSpacingEnabled(true);
+      const savedRatio = parseFloat(localStorage.getItem("skystyle_custom_spacing_ratio") ?? "1.5");
+      if (!isNaN(savedRatio) && savedRatio > 0) {
+        setCustomRatio(savedRatio);
+        customRatioRef.current = savedRatio;
+      }
+    } catch { /* ignore */ }
   }, []);
 
   async function addClosetItem(e: React.FormEvent) {
@@ -397,6 +440,51 @@ export default function Dashboard({
   const w = result?.weather;
   const rec = result?.recommendation;
 
+  // ── Drag-to-resize column handler ──
+  function onDividerMouseDown(e: React.MouseEvent) {
+    e.preventDefault();
+    isDraggingRef.current = true;
+    dragStartRef.current = {
+      x: e.clientX,
+      ratio: customRatioRef.current,
+      containerWidth: columnsContainerRef.current?.offsetWidth ?? 1000,
+    };
+
+    function onMouseMove(ev: MouseEvent) {
+      if (!isDraggingRef.current) return;
+      const dx = ev.clientX - dragStartRef.current.x;
+      // Recalculate container width each move so window-resize doesn't cause drift
+      const containerWidth = columnsContainerRef.current?.offsetWidth ?? dragStartRef.current.containerWidth;
+      const totalFlex = dragStartRef.current.ratio + 1;
+      const dRatio = (dx / containerWidth) * totalFlex;
+      const newRatio = Math.max(0.4, Math.min(4, dragStartRef.current.ratio + dRatio));
+      customRatioRef.current = newRatio;
+      setCustomRatio(newRatio);
+    }
+
+    function onMouseUp() {
+      isDraggingRef.current = false;
+      // Persist ratio
+      try { localStorage.setItem("skystyle_custom_spacing_ratio", String(customRatioRef.current)); } catch { /* ignore */ }
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    }
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }
+
+  // Compute column flex values based on active mode
+  const leftFlex = customSpacingEnabled
+    ? customRatio
+    : layoutMode === "large-weather" ? 1.5
+    : layoutMode === "large-settings" ? 1
+    : 1; // symmetric
+  const rightFlex = customSpacingEnabled
+    ? 1
+    : layoutMode === "large-settings" ? 1.5
+    : 1; // symmetric or large-weather
+
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--background)" }}>
       {/* ── Top Bar ── */}
@@ -473,8 +561,8 @@ export default function Dashboard({
             <nav className="space-y-1">
               {[
                 { label: "🏠 Home", action: () => { setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); } },
-                { label: "👤 Account", action: () => { setMenuOpen(false); document.getElementById("section-account")?.scrollIntoView({ behavior: "smooth" }); } },
-                { label: "⚙️ Settings", action: () => { setMenuOpen(false); document.getElementById("section-settings")?.scrollIntoView({ behavior: "smooth" }); } },
+                { label: "👤 Account", action: () => { setMenuOpen(false); router.push("/account"); } },
+                { label: "⚙️ Settings", action: () => { setMenuOpen(false); router.push("/settings"); } },
               ].map((item) => (
                 <button
                   key={item.label}
@@ -527,10 +615,20 @@ export default function Dashboard({
       )}
 
       {/* ── Main Content ── */}
-      <div className="flex-1 px-4 py-6">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6">
+      <div
+        className="flex-1 py-6"
+        style={{ paddingLeft: extraSpacingEnabled ? 32 : 16, paddingRight: extraSpacingEnabled ? 32 : 16 }}
+      >
+        <div
+          ref={columnsContainerRef}
+          className="max-w-7xl mx-auto flex flex-col lg:flex-row"
+          style={{ gap: 24 }}
+        >
           {/* ── Left Column: Weather ── */}
-          <div className="flex-1 space-y-5 min-w-0">
+          <div
+            className="space-y-5 min-w-0"
+            style={{ flex: leftFlex }}
+          >
             {/* ── Location Picker ── */}
             <LocationPicker onLocationResolved={handleLocationResolved} />
 
@@ -834,7 +932,7 @@ export default function Dashboard({
                         Hourly Forecast
                       </p>
                       <div className="flex gap-2 overflow-x-auto pb-1">
-                        {w!.hourly.slice(0, HOURLY_FORECAST_LIMIT).map((h, i) => (
+                        {w!.hourly.filter(h => isHourlyCurrentOrFuture(h.time)).slice(0, HOURLY_FORECAST_LIMIT).map((h, i) => (
                           <div
                             key={i}
                             className="flex-shrink-0 rounded-xl p-2 text-center min-w-[72px]"
@@ -1016,8 +1114,26 @@ export default function Dashboard({
             )}
           </div>
 
+          {/* ── Drag Divider (only when custom spacing is enabled) ── */}
+          {customSpacingEnabled && (
+            <div
+              className="hidden lg:flex items-center justify-center cursor-col-resize self-stretch group"
+              style={{ width: 12, marginLeft: -6, marginRight: -6, zIndex: 10 }}
+              onMouseDown={onDividerMouseDown}
+              title="Drag to resize columns"
+            >
+              <div
+                className="w-1 rounded-full h-16 transition-opacity duration-150 group-hover:opacity-100 opacity-30"
+                style={{ background: "var(--card-border)", minHeight: 48 }}
+              />
+            </div>
+          )}
+
           {/* ── Right Column: Config & Settings ── */}
-          <div className="lg:w-[380px] space-y-5">
+          <div
+            className="space-y-5"
+            style={{ flex: rightFlex }}
+          >
             {/* ── Gender & Location Consent ── */}
             <div
               id="section-settings"

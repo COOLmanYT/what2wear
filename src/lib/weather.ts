@@ -444,6 +444,11 @@ async function fetchOpenMeteo(lat: number, lon: number): Promise<SourceWeatherDa
   const current = data.current ?? {};
   const hourlyData = data.hourly ?? {};
 
+  // utc_offset_seconds: the queried location's UTC offset (e.g. 39600 for AEDT UTC+11).
+  // Open-Meteo returns local times (timezone=auto), so we normalise to UTC ISO so the
+  // client can display them in the user's own timezone regardless of where they are.
+  const utcOffsetSeconds: number = data.utc_offset_seconds ?? 0;
+
   const hourly: HourlyForecast[] = [];
   const times: string[] = hourlyData.time ?? [];
   const temps: number[] = hourlyData.temperature_2m ?? [];
@@ -452,8 +457,22 @@ async function fetchOpenMeteo(lat: number, lon: number): Promise<SourceWeatherDa
   const winds: number[] = hourlyData.wind_speed_10m ?? [];
 
   for (let i = 0; i < times.length; i++) {
+    // Convert "YYYY-MM-DDTHH:MM" (queried-location local) → UTC ISO with Z suffix.
+    // Guard against malformed entries that would produce NaN timestamps.
+    const raw = times[i] ?? "";
+    const tIdx = raw.indexOf("T");
+    if (tIdx < 0) continue; // skip entries without T separator
+    const dateParts = raw.slice(0, tIdx).split("-").map(Number);
+    const timeParts = raw.slice(tIdx + 1).split(":").map(Number);
+    const [year, month, day] = dateParts;
+    const hour = timeParts[0] ?? 0;
+    const min = timeParts[1] ?? 0;
+    if (!year || !month || isNaN(year) || isNaN(month) || isNaN(day)) continue;
+    const utcMs = Date.UTC(year, month - 1, day, hour, min, 0) - utcOffsetSeconds * 1000;
+    const utcIso = new Date(utcMs).toISOString();
+
     hourly.push({
-      time: times[i],
+      time: utcIso,
       temp: Math.round(temps[i] ?? 0),
       description: wmoCodeToDescription(codes[i] ?? 0),
       rainChance: Math.round(rainProbs[i] ?? 0),
