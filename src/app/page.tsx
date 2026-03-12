@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import DemoLocationPicker, { ResolvedLocation } from "@/components/DemoLocationPicker";
-import WeatherEffectCard, { getWeatherCondition } from "@/components/WeatherEffectCard";
+import WeatherEffectCard, { getWeatherCondition, formatHourlyTime } from "@/components/WeatherEffectCard";
 import Link from "next/link";
 
 interface HourlyForecast {
@@ -439,7 +439,7 @@ export default function Home() {
                           style={{ background: "var(--background)" }}
                         >
                           <p className="text-xs" style={{ color: "var(--foreground)", opacity: 0.5 }}>
-                            {h.time.includes("T") ? h.time.split("T")[1].slice(0, 5) : `${new Date(h.time).getHours()}:00`}
+                            {formatHourlyTime(h.time)}
                           </p>
                           <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
                             {h.temp}°

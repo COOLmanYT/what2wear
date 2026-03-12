@@ -2,6 +2,11 @@
 
 export type WeatherCondition = "thunder" | "rain" | "snow" | "sunny" | "fog" | "cloudy" | "default";
 
+/** Format an hourly time string, preferring HH:MM from ISO format. */
+export function formatHourlyTime(time: string): string {
+  return time.includes("T") ? time.split("T")[1].slice(0, 5) : `${new Date(time).getHours()}:00`;
+}
+
 /** Classify a weather description string into a visual condition. */
 export function getWeatherCondition(description: string): WeatherCondition {
   const d = description.toLowerCase();
@@ -52,10 +57,15 @@ function buildParticles(condition: WeatherCondition) {
   });
 }
 
+const WIND_LEAF_THRESHOLD = 20;
+const MAX_LEAVES = 12;
+const BASE_LEAF_COUNT = 8;
+const LEAF_INCREMENT_FACTOR = 0.1;
+
 function buildWindLeaves(windSpeed: number) {
-  if (windSpeed <= 20) return null;
-  const count = Math.min(12, Math.floor(8 + (windSpeed - 20) * 0.1));
-  const baseDuration = Math.max(1.5, 4 - (windSpeed - 20) * 0.06);
+  if (windSpeed <= WIND_LEAF_THRESHOLD) return null;
+  const count = Math.min(MAX_LEAVES, Math.floor(BASE_LEAF_COUNT + (windSpeed - WIND_LEAF_THRESHOLD) * LEAF_INCREMENT_FACTOR));
+  const baseDuration = Math.max(1.5, 4 - (windSpeed - WIND_LEAF_THRESHOLD) * 0.06);
   return Array.from({ length: count }, (_, i) => {
     const r1 = seededRandom(i + 500);
     const r2 = seededRandom(i + 600);

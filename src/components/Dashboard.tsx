@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import LocationPicker, { ResolvedLocation } from "./LocationPicker";
-import WeatherEffectCard, { getWeatherCondition } from "./WeatherEffectCard";
+import WeatherEffectCard, { getWeatherCondition, formatHourlyTime } from "./WeatherEffectCard";
 import { handleSignOut } from "@/app/actions";
 import Link from "next/link";
 
@@ -847,7 +847,7 @@ export default function Dashboard({
                                 opacity: 0.5,
                               }}
                             >
-                              {h.time.includes("T") ? h.time.split("T")[1].slice(0, 5) : `${new Date(h.time).getHours()}:00`}
+                              {formatHourlyTime(h.time)}
                             </p>
                             <p
                               className="text-sm font-medium"
