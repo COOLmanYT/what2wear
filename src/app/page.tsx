@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DemoLocationPicker, { ResolvedLocation } from "@/components/DemoLocationPicker";
 import WeatherEffectCard, { getWeatherCondition, formatHourlyTime, HOURLY_FORECAST_LIMIT } from "@/components/WeatherEffectCard";
 import Link from "next/link";
@@ -73,6 +73,14 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [location, setLocation] = useState<ResolvedLocation | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((data) => setIsLoggedIn(!!data?.user))
+      .catch(() => {});
+  }, []);
 
   async function handleLocationResolved(loc: ResolvedLocation) {
     setLocation(loc);
@@ -121,13 +129,23 @@ export default function Home() {
             <a href="#pricing" className="text-sm px-3 py-1.5 rounded-lg btn-interact" style={{ color: "var(--foreground)" }}>
               Pricing
             </a>
-            <Link
-              href="/login"
-              className="text-sm px-4 py-2 rounded-xl font-medium btn-interact"
-              style={{ background: "var(--accent)", color: "#fff" }}
-            >
-              Sign In
-            </Link>
+            {isLoggedIn ? (
+              <Link
+                href="/dashboard"
+                className="text-sm px-4 py-2 rounded-xl font-medium btn-interact"
+                style={{ background: "var(--accent)", color: "#fff" }}
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="text-sm px-4 py-2 rounded-xl font-medium btn-interact"
+                style={{ background: "var(--accent)", color: "#fff" }}
+              >
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       </nav>
@@ -571,10 +589,10 @@ export default function Home() {
           Start free, upgrade when you need more.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Free */}
           <div
-            className="rounded-2xl p-6"
+            className="rounded-2xl p-8"
             style={{
               background: "var(--card)",
               border: "1px solid var(--card-border)",
@@ -583,10 +601,10 @@ export default function Home() {
             <h3 className="font-semibold mb-1" style={{ color: "var(--foreground)" }}>
               Free
             </h3>
-            <p className="text-3xl font-bold mb-4" style={{ color: "var(--foreground)" }}>
+            <p className="text-3xl font-bold mb-6" style={{ color: "var(--foreground)" }}>
               A$0
             </p>
-            <ul className="text-sm space-y-2" style={{ color: "var(--foreground)", opacity: 0.7 }}>
+            <ul className="text-sm space-y-3" style={{ color: "var(--foreground)", opacity: 0.7 }}>
               <li>✅ 5 AI recommendations/day</li>
               <li>✅ 10 follow-ups/day</li>
               <li>✅ Real-time multi-source weather</li>
@@ -599,7 +617,7 @@ export default function Home() {
 
           {/* Monthly */}
           <div
-            className="rounded-2xl p-6 relative"
+            className="rounded-2xl p-8 relative"
             style={{
               background: "var(--card)",
               border: "2px solid var(--accent)",
@@ -617,7 +635,7 @@ export default function Home() {
             <p className="text-3xl font-bold mb-1" style={{ color: "var(--foreground)" }}>
               A$4<span className="text-sm font-normal opacity-60">/month</span>
             </p>
-            <ul className="text-sm space-y-2 mt-4" style={{ color: "var(--foreground)", opacity: 0.7 }}>
+            <ul className="text-sm space-y-3 mt-6" style={{ color: "var(--foreground)", opacity: 0.7 }}>
               <li>✅ Everything in Free</li>
               <li>✅ 50 credits per week</li>
               <li>✅ 100 follow-ups/day</li>
@@ -631,7 +649,7 @@ export default function Home() {
 
           {/* Lifetime */}
           <div
-            className="rounded-2xl p-6"
+            className="rounded-2xl p-8"
             style={{
               background: "var(--card)",
               border: "1px solid var(--card-border)",
@@ -643,7 +661,7 @@ export default function Home() {
             <p className="text-3xl font-bold mb-1" style={{ color: "var(--foreground)" }}>
               A$30<span className="text-sm font-normal opacity-60"> once</span>
             </p>
-            <ul className="text-sm space-y-2 mt-4" style={{ color: "var(--foreground)", opacity: 0.7 }}>
+            <ul className="text-sm space-y-3 mt-6" style={{ color: "var(--foreground)", opacity: 0.7 }}>
               <li>✅ Everything in Pro</li>
               <li>✅ One-time payment</li>
               <li>✅ Lifetime updates</li>
@@ -653,7 +671,7 @@ export default function Home() {
 
           {/* Pay As You Go */}
           <div
-            className="rounded-2xl p-6 relative"
+            className="rounded-2xl p-8 relative"
             style={{
               background: "var(--card)",
               border: "1px dashed var(--card-border)",
@@ -672,7 +690,7 @@ export default function Home() {
             <p className="text-3xl font-bold mb-1" style={{ color: "var(--foreground)" }}>
               A$?<span className="text-sm font-normal opacity-60">/use</span>
             </p>
-            <ul className="text-sm space-y-2 mt-4" style={{ color: "var(--foreground)", opacity: 0.7 }}>
+            <ul className="text-sm space-y-3 mt-6" style={{ color: "var(--foreground)", opacity: 0.7 }}>
               <li>💡 Select what you want</li>
               <li>💰 Pay only for what you use</li>
               <li>🚫 No more overpaying</li>

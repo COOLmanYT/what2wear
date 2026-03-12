@@ -5,6 +5,7 @@ import LocationPicker, { ResolvedLocation } from "./LocationPicker";
 import WeatherEffectCard, { getWeatherCondition, formatHourlyTime, HOURLY_FORECAST_LIMIT } from "./WeatherEffectCard";
 import { handleSignOut } from "@/app/actions";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface HourlyForecast {
   time: string;
@@ -123,6 +124,7 @@ export default function Dashboard({
   const [devChatError, setDevChatError] = useState<string | null>(null);
   const [devChatResult, setDevChatResult] = useState<{ outfit: string; reasoning: string; rawOutput?: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const router = useRouter();
 
   // Custom weather sources (stored in localStorage)
   type SourceMode = "builtin" | "custom" | "both";
@@ -210,6 +212,18 @@ export default function Dashboard({
         /* ignore */
       }
     })();
+
+    // Load preferences saved from the Settings page (localStorage)
+    try {
+      const savedGender = localStorage.getItem("skystyle_gender");
+      if (savedGender) setGender(savedGender);
+      const savedCustomGender = localStorage.getItem("skystyle_custom_gender");
+      if (savedCustomGender) setCustomGender(savedCustomGender);
+      const savedLocationConsent = localStorage.getItem("skystyle_location_consent");
+      if (savedLocationConsent !== null) setShareLocation(savedLocationConsent === "true");
+      const savedWeatherOnly = localStorage.getItem("skystyle_weather_only");
+      if (savedWeatherOnly !== null) setWeatherOnly(savedWeatherOnly === "true");
+    } catch { /* ignore */ }
   }, []);
 
   async function addClosetItem(e: React.FormEvent) {
@@ -473,8 +487,8 @@ export default function Dashboard({
             <nav className="space-y-1">
               {[
                 { label: "🏠 Home", action: () => { setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); } },
-                { label: "👤 Account", action: () => { setMenuOpen(false); document.getElementById("section-account")?.scrollIntoView({ behavior: "smooth" }); } },
-                { label: "⚙️ Settings", action: () => { setMenuOpen(false); document.getElementById("section-settings")?.scrollIntoView({ behavior: "smooth" }); } },
+                { label: "👤 Account", action: () => { setMenuOpen(false); router.push("/account"); } },
+                { label: "⚙️ Settings", action: () => { setMenuOpen(false); router.push("/settings"); } },
               ].map((item) => (
                 <button
                   key={item.label}
@@ -1017,7 +1031,7 @@ export default function Dashboard({
           </div>
 
           {/* ── Right Column: Config & Settings ── */}
-          <div className="lg:w-[380px] space-y-5">
+          <div className="lg:flex-1 space-y-5">
             {/* ── Gender & Location Consent ── */}
             <div
               id="section-settings"

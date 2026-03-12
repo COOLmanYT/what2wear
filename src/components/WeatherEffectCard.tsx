@@ -33,13 +33,13 @@ function seededRandom(seed: number): number {
 }
 
 function buildParticles(condition: WeatherCondition) {
-  if (condition === "default" || condition === "cloudy") return null;
-
   const count =
     condition === "thunder" ? 22
     : condition === "rain" ? 18
     : condition === "snow" ? 14
     : condition === "fog" ? 10
+    : condition === "cloudy" ? 8
+    : condition === "default" ? 5
     : 6; // sunny
 
   return Array.from({ length: count }, (_, i) => {
@@ -57,7 +57,11 @@ function buildParticles(condition: WeatherCondition) {
             ? `${3 + r3 * 2}s`
             : condition === "fog"
               ? `${4 + r3 * 3}s`
-              : `${2 + r3 * 1}s`; // sunny
+              : condition === "cloudy"
+                ? `${6 + r3 * 4}s`
+                : condition === "default"
+                  ? `${5 + r3 * 3}s`
+                  : `${2 + r3 * 1}s`; // sunny
     return { left, delay, duration, key: i };
   });
 }
@@ -112,7 +116,11 @@ export default function WeatherEffectCard({
             ? "weather-overlay-sunny"
             : condition === "fog"
               ? "weather-overlay-fog"
-              : "";
+              : condition === "cloudy"
+                ? "weather-overlay-cloudy"
+                : condition === "default"
+                  ? "weather-overlay-default"
+                  : "";
 
   return (
     <div className={`${className} weather-card weather-card-${condition}`} style={{ ...style, position: "relative", overflow: "hidden" }}>
