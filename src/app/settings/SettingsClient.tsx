@@ -15,6 +15,7 @@ function getLocalStorage(key: string, fallback: string): string {
 }
 
 type LayoutMode = "symmetric" | "large-weather" | "large-settings";
+type ThemeMode = "system" | "light" | "dark";
 const LAYOUT_OPTIONS: { value: LayoutMode; label: string; desc: string }[] = [
   { value: "symmetric",      label: "Symmetrical Split",  desc: "Both panels are equal width" },
   { value: "large-weather",  label: "Large Weather",      desc: "Weather panel is wider (default)" },
@@ -29,6 +30,9 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
   const [gender, setGender] = useState<string>(() => getLocalStorage("skystyle_gender", "N/A"));
   const [customGender, setCustomGender] = useState(() => getLocalStorage("skystyle_custom_gender", ""));
   const [unitPreference, setUnitPreference] = useState<"metric" | "imperial">(initialUnitPreference);
+  const [themeMode, setThemeMode] = useState<ThemeMode>(
+    () => (getLocalStorage("skystyle_theme_mode", "system") as ThemeMode)
+  );
   const [shareLocation, setShareLocation] = useState(() => getLocalStorage("skystyle_location_consent", "false") === "true");
   const [weatherOnly, setWeatherOnly] = useState(() => getLocalStorage("skystyle_weather_only", "false") === "true");
 
@@ -63,6 +67,7 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
     try {
       localStorage.setItem("skystyle_gender", gender);
       localStorage.setItem("skystyle_custom_gender", customGender);
+      localStorage.setItem("skystyle_theme_mode", themeMode);
       localStorage.setItem("skystyle_location_consent", String(shareLocation));
       localStorage.setItem("skystyle_weather_only", String(weatherOnly));
       localStorage.setItem("skystyle_layout_mode", layoutMode);
@@ -197,6 +202,32 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
                 }}
               >
                 {unit === "metric" ? "°C / km/h" : "°F / mph"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Appearance */}
+        <div
+          className="rounded-2xl p-5 space-y-3"
+          style={{ background: "var(--card)", border: "1px solid var(--card-border)" }}
+        >
+          <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--foreground)", opacity: 0.4 }}>
+            Appearance
+          </p>
+          <div className="flex gap-2">
+            {(["system", "light", "dark"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setThemeMode(mode)}
+                className="rounded-xl px-3 py-1.5 text-xs font-medium btn-interact capitalize"
+                style={{
+                  background: themeMode === mode ? "var(--accent)" : "var(--background)",
+                  color: themeMode === mode ? "#fff" : "var(--foreground)",
+                  border: "1px solid var(--card-border)",
+                }}
+              >
+                {mode}
               </button>
             ))}
           </div>
