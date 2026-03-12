@@ -993,89 +993,6 @@ export default function Dashboard({
                   )}
                 </WeatherEffectCard>
 
-                {isDev && (
-                  <WeatherEffectCard
-                    condition={getWeatherCondition(w?.description ?? "")}
-                    windSpeed={w!.windSpeed}
-                    className="rounded-2xl p-5 space-y-3"
-                    style={{
-                      background: "var(--card)",
-                      border: "1px solid #ff9500",
-                    }}
-                  >
-                    <h2
-                      className="text-xs font-semibold uppercase tracking-widest"
-                      style={{ color: "#ff9500" }}
-                    >
-                      🛠️ Dev Chat (no weather context)
-                    </h2>
-                    <form onSubmit={handleDevChat} className="flex gap-2">
-                      <input
-                        type="text"
-                        value={devChatMessage}
-                        onChange={(e) => setDevChatMessage(e.target.value)}
-                        placeholder="Send a message directly to the AI…"
-                        className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none"
-                        style={{
-                          background: "var(--background)",
-                          color: "var(--foreground)",
-                          border: "1px solid var(--card-border)",
-                        }}
-                      />
-                      <button
-                        type="submit"
-                        disabled={devChatLoading || !devChatMessage.trim()}
-                        className="rounded-xl px-4 py-2.5 text-sm font-medium btn-interact disabled:opacity-40"
-                        style={{ background: "#ff9500", color: "#fff" }}
-                      >
-                        {devChatLoading ? "…" : "Send"}
-                      </button>
-                    </form>
-                    {devChatError && (
-                      <p className="text-xs text-red-500">{devChatError}</p>
-                    )}
-                    {devChatResult && (
-                      <div className="space-y-2">
-                        <p
-                          className="text-sm leading-relaxed"
-                          style={{ color: "var(--foreground)" }}
-                        >
-                          {devChatResult.outfit}
-                        </p>
-                        {devChatResult.reasoning && (
-                          <p
-                            className="text-sm leading-relaxed"
-                            style={{ color: "var(--foreground)", opacity: 0.7 }}
-                          >
-                            {devChatResult.reasoning}
-                          </p>
-                        )}
-                        {devChatResult.rawOutput && (
-                          <>
-                            <h3
-                              className="text-xs font-semibold uppercase tracking-widest pt-1"
-                              style={{ color: "#ff9500", opacity: 0.7 }}
-                            >
-                              Raw AI Output
-                            </h3>
-                            <pre
-                              className="text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap rounded-xl p-3"
-                              style={{
-                                background: "var(--background)",
-                                color: "var(--foreground)",
-                                opacity: 0.6,
-                                border: "1px solid var(--card-border)",
-                              }}
-                            >
-                              {devChatResult.rawOutput}
-                            </pre>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </WeatherEffectCard>
-                )}
-
                 {/* ── Outfit Recommendation ── */}
                 {rec?.outfit && (
                 <WeatherEffectCard
@@ -1193,20 +1110,104 @@ export default function Dashboard({
                   )}
                 </WeatherEffectCard>
                 )}
-
-                {/* Refresh */}
-                <button
-                  onClick={() => location && handleLocationResolved(location)}
-                  className="w-full rounded-2xl py-3 text-sm font-medium btn-interact"
-                  style={{
-                    background: "var(--card)",
-                    border: "1px solid var(--card-border)",
-                    color: "var(--foreground)",
-                  }}
-                >
-                  🔄 Refresh
-                </button>
               </>
+            )}
+
+            {isDev && (
+              <WeatherEffectCard
+                condition={w ? getWeatherCondition(w.description) : "default"}
+                windSpeed={w?.windSpeed ?? 0}
+                className="rounded-2xl p-5 space-y-3"
+                style={{
+                  background: "var(--card)",
+                  border: "1px solid #ff9500",
+                }}
+              >
+                <h2
+                  className="text-xs font-semibold uppercase tracking-widest"
+                  style={{ color: "#ff9500" }}
+                >
+                  🛠️ Dev Chat (no weather context)
+                </h2>
+                <form onSubmit={handleDevChat} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={devChatMessage}
+                    onChange={(e) => setDevChatMessage(e.target.value)}
+                    placeholder="Send a message directly to the AI…"
+                    className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none"
+                    style={{
+                      background: "var(--background)",
+                      color: "var(--foreground)",
+                      border: "1px solid var(--card-border)",
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={devChatLoading || !devChatMessage.trim()}
+                    className="rounded-xl px-4 py-2.5 text-sm font-medium btn-interact disabled:opacity-40"
+                    style={{ background: "#ff9500", color: "#fff" }}
+                  >
+                    {devChatLoading ? "…" : "Send"}
+                  </button>
+                </form>
+                {devChatError && (
+                  <p className="text-xs text-red-500">{devChatError}</p>
+                )}
+                {devChatResult && (
+                  <div className="space-y-2">
+                    <p
+                      className="text-sm leading-relaxed"
+                      style={{ color: "var(--foreground)" }}
+                    >
+                      {devChatResult.outfit}
+                    </p>
+                    {devChatResult.reasoning && (
+                      <p
+                        className="text-sm leading-relaxed"
+                        style={{ color: "var(--foreground)", opacity: 0.7 }}
+                      >
+                        {devChatResult.reasoning}
+                      </p>
+                    )}
+                    {devChatResult.rawOutput && (
+                      <>
+                        <h3
+                          className="text-xs font-semibold uppercase tracking-widest pt-1"
+                          style={{ color: "#ff9500", opacity: 0.7 }}
+                        >
+                          Raw AI Output
+                        </h3>
+                        <pre
+                          className="text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap rounded-xl p-3"
+                          style={{
+                            background: "var(--background)",
+                            color: "var(--foreground)",
+                            opacity: 0.6,
+                            border: "1px solid var(--card-border)",
+                          }}
+                        >
+                          {devChatResult.rawOutput}
+                        </pre>
+                      </>
+                    )}
+                  </div>
+                )}
+              </WeatherEffectCard>
+            )}
+
+            {result && !loading && (
+              <button
+                onClick={() => location && handleLocationResolved(location)}
+                className="w-full rounded-2xl py-3 text-sm font-medium btn-interact"
+                style={{
+                  background: "var(--card)",
+                  border: "1px solid var(--card-border)",
+                  color: "var(--foreground)",
+                }}
+              >
+                🔄 Refresh
+              </button>
             )}
           </div>
 
