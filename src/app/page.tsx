@@ -243,6 +243,7 @@ export default function Home() {
           {location && (
             <WeatherEffectCard
               condition={weather ? getWeatherCondition(weather.description) : "default"}
+              windSpeed={weather?.windSpeed ?? 0}
               className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs"
               style={{
                 background: "var(--card)",
@@ -292,6 +293,7 @@ export default function Home() {
               {/* Weather card */}
               <WeatherEffectCard
                 condition={getWeatherCondition(weather.description)}
+                windSpeed={weather.windSpeed}
                 className="rounded-2xl p-5 space-y-3"
                 style={{
                   background: "var(--card)",
@@ -430,14 +432,14 @@ export default function Home() {
                       Hourly Forecast
                     </p>
                     <div className="flex gap-2 overflow-x-auto pb-1">
-                      {weather.hourly.slice(0, 12).map((h, i) => (
+                      {weather.hourly.slice(0, 24).map((h, i) => (
                         <div
                           key={i}
                           className="flex-shrink-0 rounded-xl p-2 text-center min-w-[72px]"
                           style={{ background: "var(--background)" }}
                         >
                           <p className="text-xs" style={{ color: "var(--foreground)", opacity: 0.5 }}>
-                            {new Date(h.time).getHours()}:00
+                            {h.time.includes("T") ? h.time.split("T")[1].slice(0, 5) : `${new Date(h.time).getHours()}:00`}
                           </p>
                           <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
                             {h.temp}°
@@ -515,6 +517,7 @@ export default function Home() {
               {/* AI recommendation — demo placeholder */}
               <WeatherEffectCard
                 condition={getWeatherCondition(weather.description)}
+                windSpeed={weather.windSpeed}
                 className="rounded-2xl p-5 space-y-3"
                 style={{
                   background: "var(--card)",

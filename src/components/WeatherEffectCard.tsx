@@ -1,25 +1,18 @@
 "use client";
 
-type WeatherCondition = "rain" | "snow" | "sunny" | "default";
+export type WeatherCondition = "thunder" | "rain" | "snow" | "sunny" | "fog" | "cloudy" | "default";
 
 /** Classify a weather description string into a visual condition. */
 export function getWeatherCondition(description: string): WeatherCondition {
   const d = description.toLowerCase();
+  if (d.includes("thunder") || d.includes("storm")) return "thunder";
   if (d.includes("snow") || d.includes("sleet") || d.includes("blizzard") || d.includes("ice"))
     return "snow";
-  if (
-    d.includes("rain") ||
-    d.includes("drizzle") ||
-    d.includes("shower") ||
-    d.includes("thunder") ||
-    d.includes("storm")
-  )
+  if (d.includes("rain") || d.includes("drizzle") || d.includes("shower"))
     return "rain";
-  if (
-    d.includes("sunny") ||
-    d.includes("clear")
-  )
-    return "sunny";
+  if (d.includes("fog") || d.includes("mist") || d.includes("haze")) return "fog";
+  if (d.includes("cloud") || d.includes("overcast")) return "cloudy";
+  if (d.includes("sunny") || d.includes("clear")) return "sunny";
   return "default";
 }
 
@@ -30,9 +23,15 @@ function seededRandom(seed: number): number {
 }
 
 function buildParticles(condition: WeatherCondition) {
-  if (condition === "default") return null;
+  if (condition === "default" || condition === "cloudy") return null;
 
-  const count = condition === "rain" ? 18 : condition === "snow" ? 14 : 6;
+  const count =
+    condition === "thunder" ? 22
+    : condition === "rain" ? 18
+    : condition === "snow" ? 14
+    : condition === "fog" ? 10
+    : 6; // sunny
+
   return Array.from({ length: count }, (_, i) => {
     const r1 = seededRandom(i + 1);
     const r2 = seededRandom(i + 100);
@@ -40,17 +39,37 @@ function buildParticles(condition: WeatherCondition) {
     const left = `${(i / count) * 100 + r1 * (100 / count)}%`;
     const delay = `${(r2 * 2).toFixed(1)}s`;
     const duration =
-      condition === "rain"
-        ? `${0.5 + r3 * 0.4}s`
-        : condition === "snow"
-          ? `${3 + r3 * 2}s`
-          : `${2 + r3 * 1}s`;
+      condition === "thunder"
+        ? `${0.35 + r3 * 0.3}s`
+        : condition === "rain"
+          ? `${0.5 + r3 * 0.4}s`
+          : condition === "snow"
+            ? `${3 + r3 * 2}s`
+            : condition === "fog"
+              ? `${4 + r3 * 3}s`
+              : `${2 + r3 * 1}s`; // sunny
     return { left, delay, duration, key: i };
+  });
+}
+
+function buildWindLeaves(windSpeed: number) {
+  if (windSpeed <= 20) return null;
+  const count = Math.min(12, Math.floor(8 + (windSpeed - 20) * 0.1));
+  const baseDuration = Math.max(1.5, 4 - (windSpeed - 20) * 0.06);
+  return Array.from({ length: count }, (_, i) => {
+    const r1 = seededRandom(i + 500);
+    const r2 = seededRandom(i + 600);
+    const r3 = seededRandom(i + 700);
+    const top = `${r1 * 90}%`;
+    const delay = `${(r2 * 3).toFixed(1)}s`;
+    const duration = `${baseDuration + r3 * 0.8}s`;
+    return { top, delay, duration, key: i };
   });
 }
 
 interface WeatherEffectCardProps {
   condition: WeatherCondition;
+  windSpeed?: number;
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
@@ -59,20 +78,26 @@ interface WeatherEffectCardProps {
 /** A card wrapper that renders subtle animated weather effects on its background. */
 export default function WeatherEffectCard({
   condition,
+  windSpeed = 0,
   children,
   className = "",
   style,
 }: WeatherEffectCardProps) {
   const particles = buildParticles(condition);
+  const windLeaves = buildWindLeaves(windSpeed);
 
   const overlayClass =
-    condition === "rain"
-      ? "weather-overlay-rain"
-      : condition === "snow"
-        ? "weather-overlay-snow"
-        : condition === "sunny"
-          ? "weather-overlay-sunny"
-          : "";
+    condition === "thunder"
+      ? "weather-overlay-thunder"
+      : condition === "rain"
+        ? "weather-overlay-rain"
+        : condition === "snow"
+          ? "weather-overlay-snow"
+          : condition === "sunny"
+            ? "weather-overlay-sunny"
+            : condition === "fog"
+              ? "weather-overlay-fog"
+              : "";
 
   return (
     <div className={`${className} weather-card weather-card-${condition}`} style={{ ...style, position: "relative", overflow: "hidden" }}>
@@ -90,6 +115,23 @@ export default function WeatherEffectCard({
                 left: p.left,
                 animationDelay: p.delay,
                 animationDuration: p.duration,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Wind leaf overlay */}
+      {windLeaves && (
+        <div className="weather-particles weather-overlay-wind">
+          {windLeaves.map((l) => (
+            <span
+              key={l.key}
+              className="weather-leaf"
+              style={{
+                top: l.top,
+                animationDelay: l.delay,
+                animationDuration: l.duration,
               }}
             />
           ))}
