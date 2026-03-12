@@ -453,9 +453,10 @@ export default function Dashboard({
     function onMouseMove(ev: MouseEvent) {
       if (!isDraggingRef.current) return;
       const dx = ev.clientX - dragStartRef.current.x;
-      // Translate pixel delta to flex ratio delta
+      // Recalculate container width each move so window-resize doesn't cause drift
+      const containerWidth = columnsContainerRef.current?.offsetWidth ?? dragStartRef.current.containerWidth;
       const totalFlex = dragStartRef.current.ratio + 1;
-      const dRatio = (dx / dragStartRef.current.containerWidth) * totalFlex;
+      const dRatio = (dx / containerWidth) * totalFlex;
       const newRatio = Math.max(0.4, Math.min(4, dragStartRef.current.ratio + dRatio));
       customRatioRef.current = newRatio;
       setCustomRatio(newRatio);

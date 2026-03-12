@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 
 const MAX_GENDER_LENGTH = 30;
@@ -52,9 +52,6 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
 
   // Reflect extra-spacing toggles instantly (before saving) so user sees live preview
-  useEffect(() => {
-    // No-op: page re-renders when state changes
-  }, [extraSpacing, extraSpacingPages]);
 
   function toggleExtraSpacingPage(page: string) {
     setExtraSpacingPages((prev) =>
