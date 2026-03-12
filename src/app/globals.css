@@ -6,16 +6,36 @@
   --card: #ffffff;
   --card-border: rgba(0, 0, 0, 0.06);
   --accent: #0071e3;
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --background: #000000;
     --foreground: #f5f5f7;
     --card: #1c1c1e;
     --card-border: rgba(255, 255, 255, 0.08);
     --accent: #2997ff;
+    color-scheme: dark;
   }
+}
+
+:root[data-theme="light"] {
+  --background: #f5f5f7;
+  --foreground: #1d1d1f;
+  --card: #ffffff;
+  --card-border: rgba(0, 0, 0, 0.06);
+  --accent: #0071e3;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --background: #000000;
+  --foreground: #f5f5f7;
+  --card: #1c1c1e;
+  --card-border: rgba(255, 255, 255, 0.08);
+  --accent: #2997ff;
+  color-scheme: dark;
 }
 
 body {
