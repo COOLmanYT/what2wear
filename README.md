@@ -26,7 +26,6 @@ AI-powered outfit recommendations based on hyper-local weather data. Never overd
 | Source picker | 1/day | Unlimited | Unlimited |
 | BYOK AI key | — | ✅ | ✅ |
 | Custom prompts | — | ✅ | ✅ |
-| Imperial units | — | ✅ | ✅ |
 
 ## Tech stack
 
