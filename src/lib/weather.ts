@@ -552,6 +552,39 @@ const MAX_RSS_ITEMS = 5;
 const MAX_RSS_ITEM_LENGTH = 300;
 export const MAX_CUSTOM_SOURCES = 10;
 
+/**
+ * Validate that a URL is safe to use as an outbound RSS fetch target.
+ * Enforces HTTPS, public host, and disallows dangerous URL features.
+ */
+function validatePublicHttpsUrlForRss(parsed: URL): void {
+  // Only allow HTTPS
+  if (parsed.protocol !== "https:") {
+    throw new Error("RSS feed URL must use HTTPS");
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+
+  // Disallow explicit non-standard ports; default HTTPS (443) only.
+  if (parsed.port && parsed.port !== "443") {
+    throw new Error("RSS feed URL must use the default HTTPS port");
+  }
+
+  // Disallow userinfo (username:password@host)
+  if ((parsed as any).username || (parsed as any).password || parsed.href.includes("@")) {
+    throw new Error("RSS feed URL must not contain credentials");
+  }
+
+  // Disallow localhost-style hosts explicitly
+  if (hostname === "localhost" || hostname.endsWith(".localhost")) {
+    throw new Error("RSS feed URL must point to a public host");
+  }
+
+  // Use existing helper to block private/internal hosts (including IPs if supported)
+  if (isPrivateHost(hostname)) {
+    throw new Error("RSS feed URL must point to a public host");
+  }
+}
+
 /** Fetch and extract text content from an RSS feed URL (for weather context) */
 async function fetchRssFeed(url: string): Promise<string> {
   let parsed: URL;
@@ -560,12 +593,9 @@ async function fetchRssFeed(url: string): Promise<string> {
   } catch {
     throw new Error("Invalid RSS feed URL");
   }
-  if (parsed.protocol !== "https:") {
-    throw new Error("RSS feed URL must use HTTPS");
-  }
-  if (isPrivateHost(parsed.hostname.toLowerCase())) {
-    throw new Error("RSS feed URL must point to a public host");
-  }
+
+  // Enforce strict SSRF-safe validation of the target URL
+  validatePublicHttpsUrlForRss(parsed);
 
   const res = await fetch(parsed.toString(), {
     headers: { "User-Agent": "SkyStyle/1.0 (weather-stylist app)" },
