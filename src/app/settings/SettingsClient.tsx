@@ -27,8 +27,8 @@ interface SettingsClientProps {
 }
 
 export default function SettingsClient({ initialUnitPreference }: SettingsClientProps) {
-  const [gender, setGender] = useState<string>(() => getLocalStorage("skystyle_gender", "N/A"));
-  const [customGender, setCustomGender] = useState(() => getLocalStorage("skystyle_custom_gender", ""));
+  const [gender, setGender] = useState<string>("N/A");
+  const [customGender, setCustomGender] = useState("");
   const [unitPreference, setUnitPreference] = useState<"metric" | "imperial">(initialUnitPreference);
   const [themeMode, setThemeMode] = useState<ThemeMode>(
     () => (getLocalStorage("skystyle_theme_mode", "system") as ThemeMode)
@@ -64,14 +64,11 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
   }
 
   function saveToLocalStorage() {
-    // localStorage is used intentionally for client-side UI preferences (gender,
-    // theme, layout, spacing). These are non-secret, non-credential values and
-    // BYOK API keys are stored separately in the Dashboard component — all
-    // client-side storage is by design so preferences survive page reloads
-    // without requiring server round-trips.
+    // localStorage is used intentionally for client-side UI preferences (theme,
+    // layout, spacing). BYOK API keys are stored separately in the Dashboard
+    // component — all client-side storage is by design so preferences survive
+    // page reloads without requiring server round-trips.
     try {
-      localStorage.setItem("skystyle_gender", gender); // lgtm[js/clear-text-storage-of-sensitive-data]
-      localStorage.setItem("skystyle_custom_gender", customGender); // lgtm[js/clear-text-storage-of-sensitive-data]
       localStorage.setItem("skystyle_theme_mode", themeMode);
       localStorage.setItem("skystyle_location_consent", String(shareLocation));
       localStorage.setItem("skystyle_weather_only", String(weatherOnly));
