@@ -9,7 +9,7 @@ export default async function LoginPage() {
   // Show demo button only in preview environments (never in production)
   const isPreview =
     process.env.VERCEL_ENV === "preview" ||
-    process.env.NODE_ENV === "development";
+    process.env.NEXT_PUBLIC_IS_PREVIEW === "true";
 
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--background)" }}>
@@ -83,8 +83,11 @@ export default async function LoginPage() {
           <form
             action={async () => {
               "use server";
-              // Server-side hard stop: block in production regardless of env var
-              if (process.env.VERCEL_ENV === "production") {
+              // Server-side hard stop: only allow in preview environments
+              if (
+                process.env.VERCEL_ENV !== "preview" &&
+                process.env.NEXT_PUBLIC_IS_PREVIEW !== "true"
+              ) {
                 return;
               }
               await signIn("demo", { redirectTo: "/dashboard" });

@@ -6,7 +6,7 @@ import { SupabaseAdapter } from "@auth/supabase-adapter";
 import type { Adapter } from "next-auth/adapters";
 
 /** Stable ID used for the demo/preview user. */
-export const DEMO_USER_ID = "demo-tester";
+export const DEMO_USER_ID = "demo-user-123";
 
 function isValidHttpUrl(str: string): boolean {
   try {
@@ -63,19 +63,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     /**
      * Demo credentials provider — active in preview environments only.
      * The authorize() function acts as an additional server-side hard-stop:
-     * it refuses the request if VERCEL_ENV is "production".
+     * it refuses the request unless VERCEL_ENV is "preview" or
+     * NEXT_PUBLIC_IS_PREVIEW is "true".
      */
     Credentials({
       id: "demo",
       name: "Demo Access",
       credentials: {},
       authorize() {
-        // Hard stop: never allow demo sessions in production
-        if (process.env.VERCEL_ENV === "production") return null;
+        // Hard stop: only allow demo sessions in preview environments
+        if (
+          process.env.VERCEL_ENV !== "preview" &&
+          process.env.NEXT_PUBLIC_IS_PREVIEW !== "true"
+        ) {
+          return null;
+        }
         return {
           id: DEMO_USER_ID,
-          name: "Tester",
-          email: "demo@skystyle.app",
+          name: "✨ Tester (Demo Mode)",
+          email: "demo@skystyle.test",
           image: null,
         };
       },
