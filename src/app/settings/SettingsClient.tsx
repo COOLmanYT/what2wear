@@ -134,6 +134,7 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
       {/* Navigation */}
       <nav
         className="sticky-nav px-4 py-3"
+        aria-label="Settings navigation"
         style={{ borderBottom: "1px solid var(--card-border)" }}
       >
         <div className="flex items-center justify-between max-w-2xl mx-auto">
@@ -146,7 +147,7 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
               ← Dashboard
             </Link>
             <span className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>
-              ⚙️ Settings
+              <span aria-hidden="true">⚙️ </span>Settings
             </span>
           </div>
           <button
@@ -160,6 +161,7 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
       </nav>
 
       {/* Content */}
+      <main id="main-content">
       <div
         className="max-w-2xl mx-auto py-8 space-y-6"
         style={{
@@ -169,6 +171,8 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
       >
         {savedMessage && (
           <div
+            role="alert"
+            aria-live="polite"
             className="rounded-2xl p-4 text-sm text-center font-medium"
             style={{
               background: "#34c75915",
@@ -176,7 +180,7 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
               color: "#34c759",
             }}
           >
-            ✅ {savedMessage}
+            <span aria-hidden="true">✅ </span>{savedMessage}
           </div>
         )}
 
@@ -185,15 +189,16 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
           className="rounded-2xl p-5 space-y-3"
           style={{ background: "var(--card)", border: "1px solid var(--card-border)" }}
         >
-          <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--foreground)", opacity: 0.4 }}>
+          <p id="settings-gender-label" className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--foreground)", opacity: 0.4 }}>
             Gender (for outfit recommendations)
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" role="group" aria-labelledby="settings-gender-label">
             {["Male", "Female", "Other", "Other - Manual"].map((opt) => (
               <button
                 key={opt}
                 onClick={() => setGender(opt === "Other" ? "N/A" : opt)}
                 className="rounded-xl px-3 py-1.5 text-xs font-medium btn-interact"
+                aria-pressed={isGenderActive(opt, gender)}
                 style={{
                   background: isGenderActive(opt, gender) ? "var(--accent)" : "var(--background)",
                   color: isGenderActive(opt, gender) ? "#fff" : "var(--foreground)",
@@ -205,15 +210,19 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
             ))}
           </div>
           {gender === "Other - Manual" && (
-            <input
-              type="text"
-              value={customGender}
-              onChange={(e) => setCustomGender(e.target.value.slice(0, MAX_GENDER_LENGTH))}
-              placeholder={`Type your gender (max ${MAX_GENDER_LENGTH} chars)`}
-              maxLength={MAX_GENDER_LENGTH}
-              className="mt-2 w-full rounded-xl px-3 py-2 text-xs outline-none"
-              style={{ background: "var(--background)", color: "var(--foreground)", border: "1px solid var(--card-border)" }}
-            />
+            <>
+              <label htmlFor="settings-custom-gender" className="sr-only">Custom gender description</label>
+              <input
+                id="settings-custom-gender"
+                type="text"
+                value={customGender}
+                onChange={(e) => setCustomGender(e.target.value.slice(0, MAX_GENDER_LENGTH))}
+                placeholder={`Type your gender (max ${MAX_GENDER_LENGTH} chars)`}
+                maxLength={MAX_GENDER_LENGTH}
+                className="mt-2 w-full rounded-xl px-3 py-2 text-xs outline-none"
+                style={{ background: "var(--background)", color: "var(--foreground)", border: "1px solid var(--card-border)" }}
+              />
+            </>
           )}
         </div>
 
@@ -222,15 +231,16 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
           className="rounded-2xl p-5 space-y-3"
           style={{ background: "var(--card)", border: "1px solid var(--card-border)" }}
         >
-          <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--foreground)", opacity: 0.4 }}>
+          <p id="settings-units-label" className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--foreground)", opacity: 0.4 }}>
             Units
           </p>
-          <div className="flex gap-2">
+          <div className="flex gap-2" role="group" aria-labelledby="settings-units-label">
             {(["metric", "imperial"] as const).map((unit) => (
               <button
                 key={unit}
                 onClick={() => setUnitPreference(unit)}
                 className="rounded-xl px-3 py-1.5 text-xs font-medium btn-interact capitalize"
+                aria-pressed={unitPreference === unit}
                 style={{
                   background: unitPreference === unit ? "var(--accent)" : "var(--background)",
                   color: unitPreference === unit ? "#fff" : "var(--foreground)",
@@ -248,15 +258,16 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
           className="rounded-2xl p-5 space-y-3"
           style={{ background: "var(--card)", border: "1px solid var(--card-border)" }}
         >
-          <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--foreground)", opacity: 0.4 }}>
+          <p id="settings-appearance-label" className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--foreground)", opacity: 0.4 }}>
             Appearance
           </p>
-          <div className="flex gap-2">
+          <div className="flex gap-2" role="group" aria-labelledby="settings-appearance-label">
             {(["system", "light", "dark"] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setThemeMode(mode)}
                 className="rounded-xl px-3 py-1.5 text-xs font-medium btn-interact capitalize"
+                aria-pressed={themeMode === mode}
                 style={{
                   background: themeMode === mode ? "var(--accent)" : "var(--background)",
                   color: themeMode === mode ? "#fff" : "var(--foreground)",
@@ -490,6 +501,7 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
           These settings apply to your outfit recommendations on the dashboard.
         </p>
       </div>
+      </main>
     </div>
   );
 }

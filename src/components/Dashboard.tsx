@@ -622,7 +622,7 @@ export default function Dashboard({
         <UpgradePlanModal onClose={() => setShowUpgradeModal(false)} />
       )}
       {/* ── Top Bar ── */}
-      <nav className="sticky-nav px-4 py-3" style={{ borderBottom: "1px solid var(--card-border)" }}>
+      <nav className="sticky-nav px-4 py-3" aria-label="Dashboard navigation" style={{ borderBottom: "1px solid var(--card-border)" }}>
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
             <button
@@ -630,6 +630,8 @@ export default function Dashboard({
               className="p-2 rounded-xl btn-interact"
               style={{ color: "var(--foreground)" }}
               aria-label="Toggle menu"
+              aria-expanded={menuOpen}
+              aria-controls="dashboard-menu"
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <line x1="3" y1="5" x2="17" y2="5" />
@@ -674,14 +676,20 @@ export default function Dashboard({
             className="fixed inset-0 z-40"
             style={{ background: "rgba(0,0,0,0.4)" }}
             onClick={() => setMenuOpen(false)}
+            aria-hidden="true"
           />
           <div
+            id="dashboard-menu"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
             className="fixed top-0 left-0 h-full w-64 z-50 p-6 space-y-4 overflow-y-auto"
             style={{ background: "var(--card)", borderRight: "1px solid var(--card-border)" }}
+            onKeyDown={(e) => { if (e.key === "Escape") setMenuOpen(false); }}
           >
             <div className="flex items-center justify-between mb-4">
               <span className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>
-                🌤️ Sky Style
+                <span aria-hidden="true">🌤️ </span>Sky Style
               </span>
               <button
                 onClick={() => setMenuOpen(false)}
@@ -692,7 +700,7 @@ export default function Dashboard({
                 ✕
               </button>
             </div>
-            <nav className="space-y-1">
+            <nav className="space-y-1" aria-label="Menu navigation">
               {[
                 { label: "🏠 Home", action: () => { setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); } },
                 { label: "👤 Account", action: () => { setMenuOpen(false); router.push("/account"); } },
@@ -774,7 +782,8 @@ export default function Dashboard({
       )}
 
       {/* ── Main Content ── */}
-      <div
+      <main
+        id="main-content"
         className="flex-1 py-6"
         style={{ paddingLeft: extraSpacingEnabled ? 32 : 16, paddingRight: extraSpacingEnabled ? 32 : 16 }}
       >
@@ -813,6 +822,7 @@ export default function Dashboard({
               <button
                 onClick={handleFetch}
                 className={`w-full rounded-2xl py-3 text-sm font-semibold btn-interact ${planBtnClass}`}
+                aria-label={weatherOnly ? "Fetch weather for selected location" : "Fetch weather and generate AI outfit recommendation"}
               >
                 {weatherOnly ? "🌤️ Fetch Weather" : "✨ Fetch Weather & Style"}
               </button>
@@ -821,13 +831,15 @@ export default function Dashboard({
             {/* ── Loading ── */}
             {(loading || aiLoading) && (
               <div
+                role="status"
+                aria-live="polite"
                 className="rounded-2xl p-8 flex flex-col items-center gap-3"
                 style={{
                   background: "var(--card)",
                   border: "1px solid var(--card-border)",
                 }}
               >
-                <div className="text-3xl animate-bounce">✨</div>
+                <div className="text-3xl animate-bounce" aria-hidden="true">✨</div>
                 <p
                   className="text-sm"
                   style={{ color: "var(--foreground)", opacity: 0.6 }}
@@ -840,6 +852,7 @@ export default function Dashboard({
             {/* ── Error ── */}
             {error && !loading && (
               <div
+                role="alert"
                 className="rounded-2xl p-4 text-sm"
                 style={{
                   background: "#ff3b3015",
@@ -847,7 +860,7 @@ export default function Dashboard({
                   color: "#ff3b30",
                 }}
               >
-                ⚠️ {error}
+                <span aria-hidden="true">⚠️ </span>{error}
               </div>
             )}
 
@@ -883,7 +896,7 @@ export default function Dashboard({
                           : `${w!.feelsLike}°C`}
                       </p>
                     </div>
-                    <span className="text-4xl">
+                    <span className="text-4xl" aria-hidden="true">
                       {weatherEmoji(w!.description, w!.isDay)}
                     </span>
                   </div>
@@ -920,7 +933,7 @@ export default function Dashboard({
                           className="text-xs"
                           style={{ color: "var(--foreground)", opacity: 0.45 }}
                         >
-                          {icon} {label}
+                          <span aria-hidden="true">{icon} </span>{label}
                         </p>
                         <p
                           className="text-sm font-medium mt-0.5"
@@ -961,17 +974,18 @@ export default function Dashboard({
                       >
                         Per-Source Breakdown
                       </p>
-                      <div className="overflow-x-auto">
+                      <div className="overflow-x-auto" tabIndex={0} aria-label="Per-source weather data — scroll horizontally to see all columns">
                         <table className="w-full text-xs" style={{ color: "var(--foreground)" }}>
+                          <caption className="sr-only">Per-source weather data breakdown</caption>
                           <thead>
                             <tr style={{ opacity: 0.5 }}>
-                              <th className="text-left py-1 pr-2">Source</th>
-                              <th className="text-right py-1 px-1">Temp</th>
-                              <th className="text-right py-1 px-1">Feels</th>
-                              <th className="text-right py-1 px-1">Hum.</th>
-                              <th className="text-right py-1 px-1">Wind</th>
-                              <th className="text-right py-1 px-1">Rain</th>
-                              <th className="text-right py-1 px-1">UV</th>
+                              <th scope="col" className="text-left py-1 pr-2">Source</th>
+                              <th scope="col" className="text-right py-1 px-1">Temp</th>
+                              <th scope="col" className="text-right py-1 px-1">Feels</th>
+                              <th scope="col" className="text-right py-1 px-1">Hum.</th>
+                              <th scope="col" className="text-right py-1 px-1">Wind</th>
+                              <th scope="col" className="text-right py-1 px-1">Rain</th>
+                              <th scope="col" className="text-right py-1 px-1">UV</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -985,6 +999,7 @@ export default function Dashboard({
                                       rel="noopener noreferrer"
                                       className="underline hover:opacity-70"
                                       style={{ color: "var(--accent)" }}
+                                      aria-label={`${s.source} (opens in new tab)`}
                                     >
                                       {s.source}
                                     </a>
@@ -1022,10 +1037,11 @@ export default function Dashboard({
                   {/* Data sources badge */}
                   <div className="flex items-center gap-2 pt-1">
                     <span
-                      className="inline-block w-2 h-2 rounded-full"
+                      className="inline-block w-2 h-2 rounded-full flex-shrink-0"
                       style={{
                         background: ACCURACY_COLOR[w!.accuracyScore],
                       }}
+                      aria-hidden="true"
                     />
                     <span
                       className="text-xs"
@@ -1069,6 +1085,7 @@ export default function Dashboard({
                               rel="noopener noreferrer"
                               className="underline hover:opacity-70"
                               style={{ color: "var(--accent)" }}
+                              aria-label={`${name} (opens in new tab)`}
                             >
                               {name}
                             </a>
@@ -1082,11 +1099,11 @@ export default function Dashboard({
                           return acc;
                         }, [])}
                       . AI by{" "}
-                      <a href="https://openai.com/" target="_blank" rel="noopener noreferrer" className="underline hover:opacity-70" style={{ color: "var(--accent)" }}>OpenAI</a>
+                      <a href="https://openai.com/" target="_blank" rel="noopener noreferrer" className="underline hover:opacity-70" style={{ color: "var(--accent)" }} aria-label="OpenAI (opens in new tab)">OpenAI</a>
                       {" / "}
-                      <a href="https://deepmind.google/technologies/gemini/" target="_blank" rel="noopener noreferrer" className="underline hover:opacity-70" style={{ color: "var(--accent)" }}>Google Gemini</a>
+                      <a href="https://deepmind.google/technologies/gemini/" target="_blank" rel="noopener noreferrer" className="underline hover:opacity-70" style={{ color: "var(--accent)" }} aria-label="Google Gemini (opens in new tab)">Google Gemini</a>
                       . Geocoding by{" "}
-                      <a href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener noreferrer" className="underline hover:opacity-70" style={{ color: "var(--accent)" }}>OpenStreetMap Nominatim</a>
+                      <a href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener noreferrer" className="underline hover:opacity-70" style={{ color: "var(--accent)" }} aria-label="OpenStreetMap Nominatim (opens in new tab)">OpenStreetMap Nominatim</a>
                       .
                     </p>
                   </div>
@@ -1100,7 +1117,7 @@ export default function Dashboard({
                       >
                         Hourly Forecast
                       </p>
-                      <div className="flex gap-2 overflow-x-auto pb-1">
+                      <div className="flex gap-2 overflow-x-auto pb-1" tabIndex={0} role="region" aria-label="Hourly forecast — scroll horizontally">
                         {w!.hourly.filter(h => isHourlyCurrentOrFuture(h.time)).slice(0, HOURLY_FORECAST_LIMIT).map((h, i) => (
                           <div
                             key={i}
@@ -1131,7 +1148,7 @@ export default function Dashboard({
                                 opacity: 0.4,
                               }}
                             >
-                              🌧{h.rainChance}%
+                              <span aria-hidden="true">🌧</span>{h.rainChance}%
                             </p>
                             <p
                               className="text-xs"
@@ -1140,7 +1157,7 @@ export default function Dashboard({
                                 opacity: 0.35,
                               }}
                             >
-                              💨{userUnitPreference === "imperial"
+                              <span aria-hidden="true">💨</span>{userUnitPreference === "imperial"
                                 ? `${Math.round(h.windSpeed * 0.621)}`
                                 : h.windSpeed}
                             </p>
@@ -1298,7 +1315,9 @@ export default function Dashboard({
                       )}
                     </p>
                     <form onSubmit={handleFollowUp} className="flex gap-2">
+                      <label htmlFor="followup-input" className="sr-only">Follow-up question</label>
                       <input
+                        id="followup-input"
                         type="text"
                         value={followUpText}
                         onChange={(e) => setFollowUpText(e.target.value)}
@@ -1319,7 +1338,7 @@ export default function Dashboard({
                       </button>
                     </form>
                     {followUpError && (
-                      <p className="text-xs text-red-500 mt-2">{followUpError}</p>
+                      <p role="alert" className="text-xs text-red-500 mt-2">{followUpError}</p>
                     )}
                   </WeatherEffectCard>
                 </div>
@@ -1344,7 +1363,9 @@ export default function Dashboard({
                   🛠️ Dev Chat (no weather context)
                 </h2>
                 <form onSubmit={handleDevChat} className="flex gap-2">
+                  <label htmlFor="devchat-input" className="sr-only">Dev chat message</label>
                   <input
+                    id="devchat-input"
                     type="text"
                     value={devChatMessage}
                     onChange={(e) => setDevChatMessage(e.target.value)}
@@ -1366,7 +1387,7 @@ export default function Dashboard({
                   </button>
                 </form>
                 {devChatError && (
-                  <p className="text-xs text-red-500">{devChatError}</p>
+                  <p role="alert" className="text-xs text-red-500">{devChatError}</p>
                 )}
                 {devChatResult && (
                   <div className="space-y-2">
@@ -1428,9 +1449,28 @@ export default function Dashboard({
           {/* ── Drag Divider (only when custom spacing is enabled) ── */}
           {customSpacingEnabled && (
             <div
+              role="separator"
+              aria-label="Drag to resize columns. Use left/right arrow keys when focused."
+              tabIndex={0}
               className="hidden lg:flex items-center justify-center cursor-col-resize self-stretch group"
               style={{ width: 12, marginLeft: -6, marginRight: -6, zIndex: 10 }}
               onMouseDown={onDividerMouseDown}
+              onKeyDown={(e) => {
+                const step = 0.05;
+                if (e.key === "ArrowLeft") {
+                  e.preventDefault();
+                  const newRatio = Math.max(0.4, customRatioRef.current - step);
+                  customRatioRef.current = newRatio;
+                  setCustomRatio(newRatio);
+                  try { localStorage.setItem("skystyle_custom_spacing_ratio", String(newRatio)); } catch { /* ignore */ }
+                } else if (e.key === "ArrowRight") {
+                  e.preventDefault();
+                  const newRatio = Math.min(4, customRatioRef.current + step);
+                  customRatioRef.current = newRatio;
+                  setCustomRatio(newRatio);
+                  try { localStorage.setItem("skystyle_custom_spacing_ratio", String(newRatio)); } catch { /* ignore */ }
+                }
+              }}
               title="Drag to resize columns"
             >
               <div
@@ -1456,17 +1496,19 @@ export default function Dashboard({
             >
               <div>
                 <p
+                  id="gender-label"
                   className="text-xs font-semibold uppercase tracking-widest mb-2"
                   style={{ color: "var(--foreground)", opacity: 0.4 }}
                 >
                   Gender (for outfit recommendations)
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2" role="group" aria-labelledby="gender-label">
                   {["Male", "Female", "Other", "Other - Manual"].map((opt) => (
                     <button
                       key={opt}
                       onClick={() => setGender(opt === "Other" ? "N/A" : opt)}
                       className="rounded-xl px-3 py-1.5 text-xs font-medium btn-interact"
+                      aria-pressed={isGenderActive(opt, gender)}
                       style={{
                         background: isGenderActive(opt, gender)
                           ? "var(--accent)"
@@ -1482,32 +1524,38 @@ export default function Dashboard({
                   ))}
                 </div>
                 {gender === "Other - Manual" && (
-                  <input
-                    type="text"
-                    value={customGender}
-                    onChange={(e) => setCustomGender(e.target.value.slice(0, MAX_GENDER_LENGTH))}
-                    placeholder={`Type your gender (max ${MAX_GENDER_LENGTH} chars)`}
-                    maxLength={MAX_GENDER_LENGTH}
-                    className="mt-2 w-full rounded-xl px-3 py-2 text-xs outline-none"
-                    style={{
-                      background: "var(--background)",
-                      color: "var(--foreground)",
-                      border: "1px solid var(--card-border)",
-                    }}
-                  />
+                  <>
+                    <label htmlFor="custom-gender-input" className="sr-only">Custom gender description</label>
+                    <input
+                      id="custom-gender-input"
+                      type="text"
+                      value={customGender}
+                      onChange={(e) => setCustomGender(e.target.value.slice(0, MAX_GENDER_LENGTH))}
+                      placeholder={`Type your gender (max ${MAX_GENDER_LENGTH} chars)`}
+                      maxLength={MAX_GENDER_LENGTH}
+                      className="mt-2 w-full rounded-xl px-3 py-2 text-xs outline-none"
+                      style={{
+                        background: "var(--background)",
+                        color: "var(--foreground)",
+                        border: "1px solid var(--card-border)",
+                      }}
+                    />
+                  </>
                 )}
               </div>
               <div>
                 <p
+                  id="units-label"
                   className="text-xs font-semibold uppercase tracking-widest mb-2"
                   style={{ color: "var(--foreground)", opacity: 0.4 }}
                 >
                   Units
                 </p>
-                <div className="flex gap-2">
+                <div className="flex gap-2" role="group" aria-labelledby="units-label">
                   {(["metric", "imperial"] as const).map((unit) => (
                     <button
                       key={unit}
+                      aria-pressed={userUnitPreference === unit}
                       onClick={async () => {
                         setUserUnitPreference(unit);
                         try {
@@ -1577,7 +1625,9 @@ export default function Dashboard({
                 👕 My Closet
               </p>
               <form onSubmit={addClosetItem} className="flex gap-2">
+                <label htmlFor="closet-input" className="sr-only">Add a closet item</label>
                 <input
+                  id="closet-input"
                   type="text"
                   value={newClosetItem}
                   onChange={(e) => setNewClosetItem(e.target.value)}
@@ -1661,6 +1711,8 @@ export default function Dashboard({
               <button
                 onClick={() => setSourcesExpanded(!sourcesExpanded)}
                 className="w-full flex items-center justify-between btn-interact"
+                aria-expanded={sourcesExpanded}
+                aria-controls="sources-panel"
               >
                 <p
                   className="text-xs font-semibold uppercase tracking-widest"
@@ -1677,7 +1729,7 @@ export default function Dashboard({
               </button>
 
               {sourcesExpanded && (
-                <div className="space-y-3">
+                <div id="sources-panel" className="space-y-3">
                   {/* Source mode selector */}
                   <div>
                     <p
@@ -2019,7 +2071,7 @@ export default function Dashboard({
 
           </div>
         </div>
-      </div>
+      </main>
 
       <footer
         className="px-6 py-6 text-center text-xs space-y-2"

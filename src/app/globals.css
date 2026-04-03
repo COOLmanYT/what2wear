@@ -416,3 +416,69 @@ body {
   -webkit-backdrop-filter: blur(16px);
   background: color-mix(in srgb, var(--background) 80%, transparent);
 }
+
+/* ── Accessibility: Skip link ── */
+.skip-link {
+  position: absolute;
+  top: -9999px;
+  left: 8px;
+  z-index: 9999;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  outline: none;
+}
+.skip-link:focus {
+  top: 8px;
+}
+
+/* ── Accessibility: Visually hidden (screen-reader only) ── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ── Accessibility: Focus-visible ring for keyboard navigation ── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Buttons and links already styled: ensure ring shows through transforms */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Inputs, selects, textareas */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+
+/* Suppress focus ring for mouse/touch users (covered by :focus-visible above) */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── Typography: bold/strong inline legibility ── */
+/* Add a tiny letter-spacing to bold inline text so it doesn't feel cramped
+   against adjacent normal-weight characters. */
+strong, b {
+  letter-spacing: 0.01em;
+}

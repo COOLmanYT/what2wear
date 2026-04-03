@@ -48,6 +48,7 @@ export default async function AccountPage() {
       {/* Navigation */}
       <nav
         className="sticky-nav px-4 py-3"
+        aria-label="Account navigation"
         style={{ borderBottom: "1px solid var(--card-border)" }}
       >
         <div className="flex items-center justify-between max-w-6xl mx-auto">
@@ -60,13 +61,14 @@ export default async function AccountPage() {
               ← Dashboard
             </Link>
             <span className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>
-              👤 Account
+              <span aria-hidden="true">👤 </span>Account
             </span>
           </div>
         </div>
       </nav>
 
       {/* Content */}
+      <main id="main-content">
       <PageSpacingWrapper page="account" className="max-w-6xl mx-auto px-4 py-8 space-y-8">
 
         {/* User Info */}
@@ -324,6 +326,7 @@ export default async function AccountPage() {
           <Link href="/privacy" className="underline hover:opacity-70">Privacy</Link>
         </div>
       </PageSpacingWrapper>
+      </main>
     </div>
   );
 }

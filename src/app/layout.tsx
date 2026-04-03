@@ -17,6 +17,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen">
+        <a href="#main-content" className="skip-link">
+          Skip to main content
+        </a>
         <ThemeController />
         {children}
         <Analytics />
