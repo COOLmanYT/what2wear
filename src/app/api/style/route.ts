@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   const userId = session.user.id;
 
   // Demo users are not persisted to Supabase — skip the sync step
-  const isDemo = userId === DEMO_USER_ID || (session.user as Record<string, unknown>).plan === "demo";
+  const isDemo = userId === DEMO_USER_ID || (session.user as unknown as Record<string, unknown>).plan === "demo";
 
   // Sync NextAuth user to public.users (required for FK references in app tables)
   if (!isDemo) {
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
   // 3. Load user profile + settings
   let isPro = false;
   let isDev = false;
-  let settings: Record<string, unknown> = {};
+  let settings: { unit_preference?: string; custom_system_prompt?: string; custom_source_url?: string } = {};
   let closetItems: string[] = [];
 
   if (isDemo) {

@@ -39,7 +39,15 @@ function SimpleToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 }
 
 export default function PrivacyClient() {
-  const [simple, setSimple] = useState(true);
+  const [simple, setSimple] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      const saved = localStorage.getItem("skystyle_simple_mode");
+      return saved !== null ? saved === "true" : true;
+    } catch {
+      return true;
+    }
+  });
 
   return (
     <div className="min-h-screen px-6 py-16 max-w-2xl mx-auto" style={{ background: "var(--background)" }}>

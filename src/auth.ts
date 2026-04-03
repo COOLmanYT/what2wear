@@ -96,7 +96,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = user?.id ?? token?.sub ?? "";
         // Propagate demo plan into the session so API routes can read it
         if (token?.plan === "demo") {
-          (session.user as Record<string, unknown>).plan = "demo";
+          (session.user as unknown as Record<string, unknown>).plan = "demo";
         }
       }
       return session;
