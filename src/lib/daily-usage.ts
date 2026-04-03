@@ -2,10 +2,10 @@
  * Daily usage tracking for rate-limiting features.
  *
  * Tracks per-user daily counts for:
- * - ai_uses:      Free users get 5/day (excludes follow-ups, source picks, closet)
- * - follow_ups:   Free: 10/day, Pro: 100/day
- * - closet_uses:  Free: 1/day, Pro: unlimited
- * - source_picks: Free: 1/day, Pro: unlimited
+ * - ai_uses:      Free users get 20/day (excludes follow-ups, source picks, closet)
+ * - follow_ups:   Free: 40/day, Pro: 400/day
+ * - closet_uses:  Free: 4/day, Pro: unlimited
+ * - source_picks: Free: 4/day, Pro: unlimited
  */
 
 import { supabaseAdmin } from "./supabase";
@@ -20,10 +20,10 @@ export interface DailyUsageRecord {
 }
 
 const LIMITS = {
-  free: { ai_uses: 5, follow_ups: 10, closet_uses: 1, source_picks: 1 },
+  free: { ai_uses: 20, follow_ups: 40, closet_uses: 4, source_picks: 4 },
   // demo plan: 10× the standard free limits for preview-environment testing
-  demo: { ai_uses: 50, follow_ups: 100, closet_uses: 10, source_picks: 10 },
-  pro: { ai_uses: Infinity, follow_ups: 100, closet_uses: Infinity, source_picks: Infinity },
+  demo: { ai_uses: 200, follow_ups: 400, closet_uses: 40, source_picks: 40 },
+  pro: { ai_uses: Infinity, follow_ups: 400, closet_uses: Infinity, source_picks: Infinity },
   dev: { ai_uses: Infinity, follow_ups: Infinity, closet_uses: Infinity, source_picks: Infinity },
 } as const;
 

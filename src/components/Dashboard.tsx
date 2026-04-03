@@ -141,11 +141,15 @@ export default function Dashboard({
   const [menuOpen, setMenuOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [changelogUnread, setChangelogUnread] = useState(false);
+  // Two-stage fetch state: weather arrives first, AI recommendation second
+  const [weatherData, setWeatherData] = useState<StyleResponse["weather"] | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiRevealed, setAiRevealed] = useState(false);
   const router = useRouter();
 
-  // Returns the gradient/background for plan-based primary buttons
-  const planBtnClass = isDev ? "btn-plan-dev" : isPro ? "btn-plan-pro" : "";
-  const planBtnStyle = !isDev && !isPro ? { background: "var(--accent)", color: "#fff" } : {};
+  // Returns the gradient/background CSS class for plan-based primary buttons
+  const planBtnClass = isDev ? "btn-plan-dev" : isPro ? "btn-plan-pro" : "btn-plan-free";
+  const planBtnStyle: React.CSSProperties = {};
 
   // Layout preferences (loaded from localStorage)
   const [layoutMode, setLayoutMode] = useState<LayoutMode>("large-weather");
@@ -274,6 +278,16 @@ export default function Dashboard({
       .catch(() => { /* ignore */ });
   }, []);
 
+  // Trigger the slide-up animation after AI recommendation arrives
+  useEffect(() => {
+    if (result?.recommendation?.outfit) {
+      const id = setTimeout(() => setAiRevealed(true), 50);
+      return () => clearTimeout(id);
+    } else {
+      setAiRevealed(false);
+    }
+  }, [result]);
+
   // Save custom sources to localStorage when changed
   const saveSourcesLocal = useCallback((mode: SourceMode, sources: CustomSource[]) => {
     try {
@@ -385,25 +399,36 @@ export default function Dashboard({
 
   const creditsRemaining = result?.meta?.creditsRemaining ?? initialCredits;
 
-  const handleLocationResolved = useCallback(async (loc: ResolvedLocation) => {
+  /** Called by LocationPicker — only stores the selected location, no auto-fetch. */
+  const handleLocationResolved = useCallback((loc: ResolvedLocation) => {
     setLocation(loc);
     setError(null);
     setResult(null);
-    setLoading(true);
+    setWeatherData(null);
+    setAiRevealed(false);
     setFollowUpText("");
     setFollowUpError(null);
-    try {
-      if (weatherOnly) {
-        // Weather-only mode: fetch weather without AI recommendation
-        const res = await fetch(`/api/weather?lat=${loc.lat}&lon=${loc.lon}`);
+  }, []);
+
+  /** Triggered by the "Fetch Weather & Style" button and the Refresh button. */
+  const handleFetch = useCallback(async () => {
+    if (!location) return;
+    setError(null);
+    setResult(null);
+    setWeatherData(null);
+    setAiRevealed(false);
+    setFollowUpText("");
+    setFollowUpError(null);
+
+    if (weatherOnly) {
+      // Weather-only mode: single fetch, no AI
+      setLoading(true);
+      setAiLoading(false);
+      try {
+        const res = await fetch(`/api/weather?lat=${location.lat}&lon=${location.lon}`);
         if (!res.ok) {
           let errorMessage = "Something went wrong.";
-          try {
-            const data = await res.json();
-            errorMessage = data.error ?? errorMessage;
-          } catch {
-            /* non-JSON error response */
-          }
+          try { const data = await res.json(); errorMessage = data.error ?? errorMessage; } catch { /* non-JSON */ }
           setError(errorMessage);
         } else {
           const weather = await res.json();
@@ -413,41 +438,59 @@ export default function Dashboard({
             meta: { isPro, unitPreference: userUnitPreference, creditsRemaining: null },
           });
         }
+      } catch {
+        setError("Network error — please try again.");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Two-stage mode: fire weather + style requests simultaneously
+    setLoading(true);
+    setAiLoading(true);
+
+    const effectiveGender = gender === "Other - Manual" ? customGender.slice(0, MAX_GENDER_LENGTH) : gender;
+    // Both requests start immediately (parallel)
+    const weatherPromise = fetch(`/api/weather?lat=${location.lat}&lon=${location.lon}`);
+    const stylePromise = fetch("/api/style", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lat: location.lat, lon: location.lon, gender: effectiveGender, shareLocation, forceCloset,
+        unitPreference: userUnitPreference, sourceMode, customSources,
+        ...(userApiKey ? { userApiKey } : {}),
+      }),
+    });
+
+    // Stage 1: weather (fast — show as soon as it arrives)
+    try {
+      const weatherRes = await weatherPromise;
+      if (weatherRes.ok) {
+        const weather = await weatherRes.json();
+        setWeatherData(weather);
+      }
+    } catch { /* weather network error — style result may still save us */ }
+    setLoading(false);
+
+    // Stage 2: AI recommendation (slower — reveal with animation)
+    try {
+      const styleRes = await stylePromise;
+      if (!styleRes.ok) {
+        let errorMessage = "Something went wrong.";
+        try { const data = await styleRes.json(); errorMessage = data.error ?? errorMessage; } catch { /* non-JSON */ }
+        setError(errorMessage);
       } else {
-        const effectiveGender = gender === "Other - Manual" ? customGender.slice(0, MAX_GENDER_LENGTH) : gender;
-        const res = await fetch("/api/style", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            lat: loc.lat, lon: loc.lon, gender: effectiveGender, shareLocation, forceCloset,
-            unitPreference: userUnitPreference, sourceMode, customSources,
-            ...(userApiKey ? { userApiKey } : {}),
-          }),
-        });
-        if (!res.ok) {
-          let errorMessage = "Something went wrong.";
-          try {
-            const data = await res.json();
-            errorMessage = data.error ?? errorMessage;
-          } catch {
-            /* non-JSON error response */
-          }
-          setError(errorMessage);
-        } else {
-          const data = await res.json();
-          const styleResult = data as StyleResponse;
-          setResult(styleResult);
-          if (styleResult.meta?.dailyLimits) {
-            setDailyLimits(styleResult.meta.dailyLimits);
-          }
-        }
+        const data = await styleRes.json() as StyleResponse;
+        setResult(data);
+        if (data.meta?.dailyLimits) setDailyLimits(data.meta.dailyLimits);
       }
     } catch {
       setError("Network error — please try again.");
     } finally {
-      setLoading(false);
+      setAiLoading(false);
     }
-  }, [weatherOnly, gender, customGender, shareLocation, forceCloset, isPro, userUnitPreference, sourceMode, customSources, userApiKey]);
+  }, [location, weatherOnly, gender, customGender, shareLocation, forceCloset, isPro, userUnitPreference, sourceMode, customSources, userApiKey]);
 
   async function handleFollowUp(e: React.FormEvent) {
     e.preventDefault();
@@ -525,7 +568,7 @@ export default function Dashboard({
     }
   }
 
-  const w = result?.weather;
+  const w = result?.weather ?? weatherData;
   const rec = result?.recommendation;
 
   // ── Drag-to-resize column handler ──
@@ -765,8 +808,18 @@ export default function Dashboard({
               </WeatherEffectCard>
             )}
 
+            {/* ── Fetch Button (shown after location selected, before fetch starts) ── */}
+            {location && !loading && !aiLoading && !result && !weatherData && (
+              <button
+                onClick={handleFetch}
+                className={`w-full rounded-2xl py-3 text-sm font-semibold btn-interact ${planBtnClass}`}
+              >
+                {weatherOnly ? "🌤️ Fetch Weather" : "✨ Fetch Weather & Style"}
+              </button>
+            )}
+
             {/* ── Loading ── */}
-            {loading && (
+            {(loading || aiLoading) && (
               <div
                 className="rounded-2xl p-8 flex flex-col items-center gap-3"
                 style={{
@@ -779,7 +832,7 @@ export default function Dashboard({
                   className="text-sm"
                   style={{ color: "var(--foreground)", opacity: 0.6 }}
                 >
-                  Fetching weather{weatherOnly ? "…" : " & styling your look…"}
+                  {loading ? `Fetching weather${weatherOnly ? "…" : "…"}` : "Generating outfit recommendation…"}
                 </p>
               </div>
             )}
@@ -799,7 +852,7 @@ export default function Dashboard({
             )}
 
             {/* ── Main Weather Card + Outfit + Follow-up + Refresh ── */}
-            {result && !loading && (
+            {(result || weatherData) && !loading && (
               <>
                 <WeatherEffectCard
                   condition={getWeatherCondition(w?.description ?? "")}
@@ -1098,158 +1151,178 @@ export default function Dashboard({
                   )}
                 </WeatherEffectCard>
 
-                {/* ── Outfit Recommendation ── */}
-                {rec?.outfit && (
-                <>
-                {rec.closetWarning && (
+                {/* ── AI Loading Skeleton (weather arrived, AI still loading) ── */}
+                {aiLoading && !rec?.outfit && (
                   <div
-                    className="rounded-xl px-3 py-2 text-xs"
+                    className="rounded-2xl p-5 space-y-3"
                     style={{
-                      background: "#ff950018",
-                      border: "1px solid #ff950033",
-                      color: "#ff9500",
+                      background: "var(--card)",
+                      border: "1px solid var(--card-border)",
                     }}
                   >
-                    ⚠️ {rec.closetWarning}
+                    <p
+                      className="text-xs font-semibold uppercase tracking-widest"
+                      style={{ color: "var(--accent)" }}
+                    >
+                      ✨ Generating outfit recommendation…
+                    </p>
+                    <div className="space-y-2 animate-pulse">
+                      <div className="h-4 rounded-xl" style={{ background: "var(--background)", width: "80%" }} />
+                      <div className="h-4 rounded-xl" style={{ background: "var(--background)", width: "65%" }} />
+                      <div className="h-4 rounded-xl" style={{ background: "var(--background)", width: "50%" }} />
+                    </div>
                   </div>
                 )}
-                <WeatherEffectCard
-                  condition={getWeatherCondition(w?.description ?? "")}
-                  windSpeed={w!.windSpeed}
-                  className="rounded-2xl p-5 space-y-3"
-                  style={{
-                    background: "var(--card)",
-                    border: "1px solid var(--card-border)",
-                  }}
-                >
-                  <h2
-                    className="text-xs font-semibold uppercase tracking-widest"
-                    style={{ color: "var(--accent)" }}
-                  >
-                    Outfit Recommendation
-                  </h2>
-                  <p
-                    className="text-base leading-relaxed"
-                    style={{ color: "var(--foreground)" }}
-                  >
-                    {rec!.outfit}
-                  </p>
-                  {rec!.reasoning && (
-                    <>
-                      <h3
-                        className="text-xs font-semibold uppercase tracking-widest pt-1"
-                        style={{ color: "var(--foreground)", opacity: 0.4 }}
-                      >
-                        Reasoning
-                      </h3>
-                      <p
-                        className="text-sm leading-relaxed"
-                        style={{ color: "var(--foreground)", opacity: 0.7 }}
-                      >
-                        {rec!.reasoning}
-                      </p>
-                      <div className="flex items-center gap-2 pt-1">
-                        <span
-                          className="text-xs"
-                          style={{ color: "var(--foreground)", opacity: 0.5 }}
-                        >
-                          🤖 {result?.meta?.modelUsed ?? rec!.modelUsed ?? "unknown"}
-                        </span>
-                        {!isPro && !isDev && (
-                          <button
-                            onClick={() => setShowUpgradeModal(true)}
-                            className="rounded-full px-2.5 py-1 text-xs btn-interact"
-                            style={{
-                              background: "var(--background)",
-                              color: "var(--foreground)",
-                              border: "1px solid var(--card-border)",
-                              opacity: 0.7,
-                            }}
-                          >
-                            ⭐ Upgrade to Pro for GPT-4o
-                          </button>
-                        )}
-                      </div>
-                    </>
+
+                {/* ── Outfit Recommendation + Follow-Up (revealed with animation) ── */}
+                {rec?.outfit && (
+                <div className={`space-y-4 ${aiRevealed ? "ai-slide-up-reveal" : ""}`}>
+                  {rec.closetWarning && (
+                    <div
+                      className="rounded-xl px-3 py-2 text-xs"
+                      style={{
+                        background: "#ff950018",
+                        border: "1px solid #ff950033",
+                        color: "#ff9500",
+                      }}
+                    >
+                      ⚠️ {rec.closetWarning}
+                    </div>
                   )}
-                  {isDev && (rec as { rawOutput?: string })?.rawOutput && (
-                    <>
-                      <h3
-                        className="text-xs font-semibold uppercase tracking-widest pt-1"
-                        style={{ color: "#ff9500", opacity: 0.7 }}
-                      >
-                        🛠️ Raw AI Output (Dev)
-                      </h3>
-                      <pre
-                        className="text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap rounded-xl p-3"
+                  <WeatherEffectCard
+                    condition={getWeatherCondition(w?.description ?? "")}
+                    windSpeed={w!.windSpeed}
+                    className="rounded-2xl p-5 space-y-3"
+                    style={{
+                      background: "var(--card)",
+                      border: "1px solid var(--card-border)",
+                    }}
+                  >
+                    <h2
+                      className="text-xs font-semibold uppercase tracking-widest"
+                      style={{ color: "var(--accent)" }}
+                    >
+                      Outfit Recommendation
+                    </h2>
+                    <p
+                      className="text-base leading-relaxed"
+                      style={{ color: "var(--foreground)" }}
+                    >
+                      {rec!.outfit}
+                    </p>
+                    {rec!.reasoning && (
+                      <>
+                        <h3
+                          className="text-xs font-semibold uppercase tracking-widest pt-1"
+                          style={{ color: "var(--foreground)", opacity: 0.4 }}
+                        >
+                          Reasoning
+                        </h3>
+                        <p
+                          className="text-sm leading-relaxed"
+                          style={{ color: "var(--foreground)", opacity: 0.7 }}
+                        >
+                          {rec!.reasoning}
+                        </p>
+                        <div className="flex items-center gap-2 pt-1">
+                          <span
+                            className="text-xs"
+                            style={{ color: "var(--foreground)", opacity: 0.5 }}
+                          >
+                            🤖 {result?.meta?.modelUsed ?? rec!.modelUsed ?? "unknown"}
+                          </span>
+                          {!isPro && !isDev && (
+                            <button
+                              onClick={() => setShowUpgradeModal(true)}
+                              className="rounded-full px-2.5 py-1 text-xs btn-interact"
+                              style={{
+                                background: "var(--background)",
+                                color: "var(--foreground)",
+                                border: "1px solid var(--card-border)",
+                                opacity: 0.7,
+                              }}
+                            >
+                              ⭐ Upgrade to Pro for GPT-4o
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                    {isDev && (rec as { rawOutput?: string })?.rawOutput && (
+                      <>
+                        <h3
+                          className="text-xs font-semibold uppercase tracking-widest pt-1"
+                          style={{ color: "#ff9500", opacity: 0.7 }}
+                        >
+                          🛠️ Raw AI Output (Dev)
+                        </h3>
+                        <pre
+                          className="text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap rounded-xl p-3"
+                          style={{
+                            background: "var(--background)",
+                            color: "var(--foreground)",
+                            opacity: 0.6,
+                            border: "1px solid var(--card-border)",
+                          }}
+                        >
+                          {(rec as { rawOutput?: string }).rawOutput}
+                        </pre>
+                      </>
+                    )}
+                  </WeatherEffectCard>
+
+                  {/* ── Follow-Up Input ── */}
+                  <WeatherEffectCard
+                    condition={getWeatherCondition(w?.description ?? "")}
+                    windSpeed={w!.windSpeed}
+                    className="rounded-2xl p-4"
+                    style={{
+                      background: "var(--card)",
+                      border: "1px solid var(--card-border)",
+                    }}
+                  >
+                    <p
+                      className="text-xs font-semibold uppercase tracking-widest mb-2"
+                      style={{ color: "var(--foreground)", opacity: 0.4 }}
+                    >
+                      Follow Up
+                      {dailyLimits && (
+                        <span style={{ opacity: 0.7, fontWeight: "normal", textTransform: "none" }}>
+                          {" "}
+                          — {dailyLimits.followUps.used}/
+                          {dailyLimits.followUps.limit === null
+                            ? "∞"
+                            : dailyLimits.followUps.limit}{" "}
+                          used today
+                        </span>
+                      )}
+                    </p>
+                    <form onSubmit={handleFollowUp} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={followUpText}
+                        onChange={(e) => setFollowUpText(e.target.value)}
+                        placeholder="e.g. what if I need to wear shoes?"
+                        className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none"
                         style={{
                           background: "var(--background)",
                           color: "var(--foreground)",
-                          opacity: 0.6,
                           border: "1px solid var(--card-border)",
                         }}
+                      />
+                      <button
+                        type="submit"
+                        disabled={followUpLoading || !followUpText.trim()}
+                        className={`rounded-xl px-4 py-2.5 text-sm font-medium btn-interact disabled:opacity-40 ${planBtnClass}`}
                       >
-                        {(rec as { rawOutput?: string }).rawOutput}
-                      </pre>
-                    </>
-                  )}
-                </WeatherEffectCard>
-                </>
-                )}
-
-                {/* ── Follow-Up Input ── */}
-                {rec?.outfit && (
-                <WeatherEffectCard
-                  condition={getWeatherCondition(w?.description ?? "")}
-                  windSpeed={w!.windSpeed}
-                  className="rounded-2xl p-4"
-                  style={{
-                    background: "var(--card)",
-                    border: "1px solid var(--card-border)",
-                  }}
-                >
-                  <p
-                    className="text-xs font-semibold uppercase tracking-widest mb-2"
-                    style={{ color: "var(--foreground)", opacity: 0.4 }}
-                  >
-                    Follow Up
-                    {dailyLimits && (
-                      <span style={{ opacity: 0.7, fontWeight: "normal", textTransform: "none" }}>
-                        {" "}
-                        — {dailyLimits.followUps.used}/
-                        {dailyLimits.followUps.limit === null
-                          ? "∞"
-                          : dailyLimits.followUps.limit}{" "}
-                        used today
-                      </span>
+                        {followUpLoading ? "…" : "Ask"}
+                      </button>
+                    </form>
+                    {followUpError && (
+                      <p className="text-xs text-red-500 mt-2">{followUpError}</p>
                     )}
-                  </p>
-                  <form onSubmit={handleFollowUp} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={followUpText}
-                      onChange={(e) => setFollowUpText(e.target.value)}
-                      placeholder="e.g. what if I need to wear shoes?"
-                      className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none"
-                      style={{
-                        background: "var(--background)",
-                        color: "var(--foreground)",
-                        border: "1px solid var(--card-border)",
-                      }}
-                    />
-                    <button
-                      type="submit"
-                      disabled={followUpLoading || !followUpText.trim()}
-                      className="rounded-xl px-4 py-2.5 text-sm font-medium btn-interact disabled:opacity-40"
-                      style={{ background: "var(--accent)", color: "#fff" }}
-                    >
-                      {followUpLoading ? "…" : "Ask"}
-                    </button>
-                  </form>
-                  {followUpError && (
-                    <p className="text-xs text-red-500 mt-2">{followUpError}</p>
-                  )}
-                </WeatherEffectCard>
+                  </WeatherEffectCard>
+                </div>
                 )}
               </>
             )}
@@ -1337,9 +1410,9 @@ export default function Dashboard({
               </WeatherEffectCard>
             )}
 
-            {result && !loading && (
+            {(result || weatherData) && !loading && !aiLoading && (
               <button
-                onClick={() => location && handleLocationResolved(location)}
+                onClick={handleFetch}
                 className="w-full rounded-2xl py-3 text-sm font-medium btn-interact"
                 style={{
                   background: "var(--card)",
@@ -1519,8 +1592,7 @@ export default function Dashboard({
                 <button
                   type="submit"
                   disabled={closetLoading || !newClosetItem.trim()}
-                  className="rounded-xl px-4 py-2.5 text-sm font-medium btn-interact disabled:opacity-40"
-                  style={{ background: "var(--accent)", color: "#fff" }}
+                  className={`rounded-xl px-4 py-2.5 text-sm font-medium btn-interact disabled:opacity-40 ${planBtnClass}`}
                 >
                   {closetLoading ? "…" : "Add"}
                 </button>
@@ -1778,8 +1850,7 @@ export default function Dashboard({
                       <button
                         type="submit"
                         disabled={!newSourceName.trim() || !newSourceValue.trim()}
-                        className="rounded-xl px-4 py-2 text-xs font-medium btn-interact disabled:opacity-40"
-                        style={{ background: "var(--accent)", color: "#fff" }}
+                        className={`rounded-xl px-4 py-2 text-xs font-medium btn-interact disabled:opacity-40 ${planBtnClass}`}
                       >
                         Add Source
                       </button>

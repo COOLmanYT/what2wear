@@ -382,6 +382,11 @@ body {
 }
 
 /* ── Plan-based primary button gradients ── */
+.btn-plan-free {
+  background: linear-gradient(135deg, #3b7cf4 0%, #1a3a8f 100%) !important;
+  color: #fff !important;
+}
+
 .btn-plan-pro {
   background: linear-gradient(135deg, #0071e3 0%, #9b59b6 100%) !important;
   color: #fff !important;
@@ -390,6 +395,16 @@ body {
 .btn-plan-dev {
   background: linear-gradient(135deg, #0071e3 0%, #ff9500 100%) !important;
   color: #fff !important;
+}
+
+/* ── AI recommendation reveal animation ── */
+@keyframes skystyle-slide-up-fade {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.ai-slide-up-reveal {
+  animation: skystyle-slide-up-fade 0.45s ease-out forwards;
 }
 
 /* Sticky nav glassmorphism */

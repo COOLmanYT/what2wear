@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-04-03T08:45:47.833Z",
+    "version": "1.5.0",
+    "title": "Tiered UI gradients, quadrupled credits, multi-stage fetch",
+    "description": "Tiered UI gradients per plan (free/pro/dev), quadrupled free & pro credits, refactored multi-stage weather/AI fetching workflow with intermediate state and slide-up reveal animation."
+  },
+  {
     "date": "2026-04-03T01:51:22.000Z",
     "version": "1.4.0",
     "title": "BYOK localStorage + gender persistence + legal doc updates",

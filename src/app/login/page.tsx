@@ -6,10 +6,11 @@ export default async function LoginPage() {
   const session = await auth();
   if (session?.user) redirect("/dashboard");
 
-  // Show demo button only in preview environments (never in production)
+  // Show demo button in preview environments and local development
   const isPreview =
     process.env.VERCEL_ENV === "preview" ||
-    process.env.NEXT_PUBLIC_IS_PREVIEW === "true";
+    process.env.NEXT_PUBLIC_IS_PREVIEW === "true" ||
+    process.env.NODE_ENV === "development";
 
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--background)" }}>
@@ -83,10 +84,11 @@ export default async function LoginPage() {
           <form
             action={async () => {
               "use server";
-              // Server-side hard stop: only allow in preview environments
+              // Server-side hard stop: only allow in preview/development environments
               if (
                 process.env.VERCEL_ENV !== "preview" &&
-                process.env.NEXT_PUBLIC_IS_PREVIEW !== "true"
+                process.env.NEXT_PUBLIC_IS_PREVIEW !== "true" &&
+                process.env.NODE_ENV !== "development"
               ) {
                 return;
               }
