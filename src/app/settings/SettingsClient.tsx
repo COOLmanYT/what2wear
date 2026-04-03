@@ -27,7 +27,16 @@ interface SettingsClientProps {
 }
 
 export default function SettingsClient({ initialUnitPreference }: SettingsClientProps) {
-  const [gender, setGender] = useState<string>(() => getLocalStorage("skystyle_gender", "N/A"));
+  const [gender, setGender] = useState<string>(() => {
+    const stored = getLocalStorage("skystyle_gender", "N/A");
+    if (!stored) return "N/A";
+    try {
+      // Decode stored gender; fall back to raw value if decoding fails
+      return atob(stored);
+    } catch {
+      return stored;
+    }
+  });
   const [customGender, setCustomGender] = useState<string>(() => {
     const stored = getLocalStorage("skystyle_custom_gender", "");
     if (!stored) return "";
@@ -89,7 +98,12 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
       localStorage.setItem("skystyle_extra_spacing", String(extraSpacing));
       localStorage.setItem("skystyle_extra_spacing_pages", extraSpacingPages.join(","));
       localStorage.setItem("skystyle_custom_spacing", String(customSpacing));
-      localStorage.setItem("skystyle_gender", gender);
+      try {
+        // Encode gender before storing
+        localStorage.setItem("skystyle_gender", btoa(gender));
+      } catch {
+        /* ignore encoding errors */
+      }
       try {
         // Encode custom gender before storing
         localStorage.setItem("skystyle_custom_gender", btoa(customGender));
