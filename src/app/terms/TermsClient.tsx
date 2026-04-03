@@ -87,7 +87,7 @@ export default function TermsClient() {
           >
             <p className="text-base font-semibold" style={{ opacity: 1 }}>🚧 This is a Work in Progress</p>
             <p>
-              Sky Style is a <strong>Proof of Concept (POC)</strong> project built by one person. It may be
+              Sky Style is a{" "}<strong>Proof of Concept (POC)</strong>{" "}project built by one person. It may be
               buggy, break unexpectedly, or change at any time. We make no promises about reliability or uptime.
             </p>
           </div>
@@ -199,7 +199,7 @@ export default function TermsClient() {
           <section>
             <h2 className="text-lg font-semibold mb-2" style={{ opacity: 1 }}>Proof of Concept status</h2>
             <p>
-              Sky Style is a <strong>Work in Progress (WIP) / Proof of Concept (POC)</strong>. Features may
+              Sky Style is a{" "}<strong>Work in Progress (WIP) / Proof of Concept (POC)</strong>. Features may
               change, break, or be removed at any time without notice. There are no paid Service Level
               Agreements (SLAs) or uptime guarantees of any kind. The project is operated by a single
               individual on a best-effort basis.
@@ -292,7 +292,7 @@ export default function TermsClient() {
             <p>
               To the maximum extent permitted by law — including the{" "}
               <em>Australian Consumer Law (Schedule 2 of the Competition and Consumer Act 2010)</em>{" "}
-              — Sky Style is provided <strong>&quot;as is&quot;</strong> and{" "}
+              — Sky Style is provided{" "}<strong>&quot;as is&quot;</strong>{" "}and{" "}
               <strong>&quot;as available&quot;</strong>, without warranties of any kind, whether express or
               implied. This includes, but is not limited to, implied warranties of
               merchantability, fitness for a particular purpose, and non-infringement.

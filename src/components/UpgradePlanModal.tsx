@@ -60,7 +60,7 @@ export default function UpgradePlanModal({ onClose }: Props) {
         </button>
 
         {/* Icon */}
-        <div className="text-4xl text-center">☕</div>
+        <div className="text-4xl text-center" aria-hidden="true">☕</div>
 
         {/* Heading */}
         <h2
@@ -74,7 +74,7 @@ export default function UpgradePlanModal({ onClose }: Props) {
         {/* Body */}
         <p className="text-sm text-center leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.65 }}>
           We&apos;re still setting up secure payment processing with Stripe — paid plans aren&apos;t
-          available yet. Sky Style is currently <strong>free</strong> while we&apos;re in our
+          available yet. Sky Style is currently{" "}<strong>free</strong>{" "}while we&apos;re in our
           Proof of Concept phase.
         </p>
         <p className="text-sm text-center leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.65 }}>

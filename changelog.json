@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-04-03T10:31:55.000Z",
+    "version": "1.6.1",
+    "title": "Fix missing whitespace between bold and regular text",
+    "description": "Added explicit {\" \"} JSX whitespace around all inline <strong> elements in legal docs and the upgrade modal; removed incorrect CSS letter-spacing workaround; reverted visual spacing overrides."
+  },
+  {
+    "date": "2026-04-03T09:47:06.000Z",
+    "version": "1.6.0",
+    "title": "WCAG 2.2 AA accessibility refactor + text spacing fixes",
+    "description": "Skip link, semantic landmarks (main/nav/footer), aria-labels, focus-visible ring, sr-only class, aria-hidden decorations, role=alert/status, aria-expanded/pressed, accessible tables, drag divider keyboard support, and improved text spacing around bold elements."
+  },
+  {
+    "date": "2026-04-03T08:45:47.833Z",
+    "version": "1.5.0",
+    "title": "Tiered UI gradients, quadrupled credits, multi-stage fetch",
+    "description": "Tiered UI gradients per plan (free/pro/dev), quadrupled free & pro credits, refactored multi-stage weather/AI fetching workflow with intermediate state and slide-up reveal animation."
+  },
+  {
     "date": "2026-04-03T01:51:22.000Z",
     "version": "1.4.0",
     "title": "BYOK localStorage + gender persistence + legal doc updates",

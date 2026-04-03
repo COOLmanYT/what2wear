@@ -87,11 +87,11 @@ export default function PrivacyClient() {
           >
             <p className="text-base font-semibold" style={{ opacity: 1 }}>👤 What we collect (and why)</p>
             <ul className="space-y-2 list-disc pl-5">
-              <li><strong>Name &amp; email</strong> — from your GitHub or Google login, so you can sign in.</li>
-              <li><strong>Location</strong> — only used to fetch weather. Never stored.</li>
-              <li><strong>Gender preference</strong> — optional. Stored locally on your device and sent to the AI when generating recommendations.</li>
-              <li><strong>Closet items</strong> — optional. Stored so AI can personalise recommendations.</li>
-              <li><strong>Daily usage counts</strong> — for rate limiting only. No request content stored.</li>
+              <li><strong>Name &amp; email</strong>{" "}— from your GitHub or Google login, so you can sign in.</li>
+              <li><strong>Location</strong>{" "}— only used to fetch weather. Never stored.</li>
+              <li><strong>Gender preference</strong>{" "}— optional. Stored locally on your device and sent to the AI when generating recommendations.</li>
+              <li><strong>Closet items</strong>{" "}— optional. Stored so AI can personalise recommendations.</li>
+              <li><strong>Daily usage counts</strong>{" "}— for rate limiting only. No request content stored.</li>
             </ul>
           </div>
           <div
@@ -180,7 +180,7 @@ export default function PrivacyClient() {
               </a>{" "}
               principles. We collect only the minimum data needed for the app to work. If we
               do not need it, we do not collect it. This policy is written in plain language.
-              Sky Style is a <strong>WIP/POC</strong> project — data practices may evolve as
+              Sky Style is a{" "}<strong>WIP/POC</strong>{" "}project — data practices may evolve as
               the project matures.
             </p>
           </section>
@@ -189,28 +189,28 @@ export default function PrivacyClient() {
             <h2 className="text-lg font-semibold mb-2" style={{ opacity: 1 }}>What we collect</h2>
             <ul className="list-disc pl-5 space-y-1">
               <li>
-                <strong>Account info</strong> — your name, email, and profile image from your
+                <strong>Account info</strong>{" "}— your name, email, and profile image from your
                 GitHub or Google account. This is needed for authentication.
               </li>
               <li>
-                <strong>Location</strong> — the coordinates you provide (GPS or typed) are sent to
+                <strong>Location</strong>{" "}— the coordinates you provide (GPS or typed) are sent to
                 weather APIs to fetch weather data. We do not store your location history.
-                Your location is <strong>not</strong> shared with the AI unless you explicitly
+                Your location is{" "}<strong>not</strong>{" "}shared with the AI unless you explicitly
                 consent via the &quot;Share my location with AI&quot; toggle.
               </li>
               <li>
-                <strong>Gender preference</strong> — optional. Stored locally on your device and sent to the AI only when generating recommendations. This data is not stored on Sky Style servers.
+                <strong>Gender preference</strong>{" "}— optional. Stored locally on your device and sent to the AI only when generating recommendations. This data is not stored on Sky Style servers.
               </li>
               <li>
-                <strong>Closet items</strong> — clothing descriptions you choose to add. Stored so
+                <strong>Closet items</strong>{" "}— clothing descriptions you choose to add. Stored so
                 the AI can make personalised recommendations.
               </li>
               <li>
-                <strong>Settings</strong> — your unit preference, custom prompts, and custom weather
+                <strong>Settings</strong>{" "}— your unit preference, custom prompts, and custom weather
                 source URLs if you set them.
               </li>
               <li>
-                <strong>Usage counts</strong> — daily counters for rate limiting (AI uses,
+                <strong>Usage counts</strong>{" "}— daily counters for rate limiting (AI uses,
                 follow-ups, closet uses, source picks). No request content is stored.
               </li>
             </ul>
@@ -268,7 +268,7 @@ export default function PrivacyClient() {
                 each request.
               </li>
               <li>
-                <strong>Weather providers:</strong> OpenWeatherMap, Open-Meteo, BOM, WeatherAPI, Visual Crossing, Pirate Weather — only coordinates are sent.
+                <strong>Weather providers:</strong>{" "}OpenWeatherMap, Open-Meteo, BOM, WeatherAPI, Visual Crossing, Pirate Weather — only coordinates are sent.
               </li>
               <li>
                 <strong>
@@ -286,7 +286,7 @@ export default function PrivacyClient() {
                 </strong>{" "}
                 — hosting.
               </li>
-              <li><strong>GitHub / Google OAuth</strong> — authentication providers.</li>
+              <li><strong>GitHub / Google OAuth</strong>{" "}— authentication providers.</li>
             </ul>
           </section>
 
@@ -334,12 +334,12 @@ export default function PrivacyClient() {
               <em>Australian Privacy Act 1988</em>, <em>GDPR</em>, and similar laws:
             </p>
             <ul className="list-disc pl-5 space-y-1 mt-2">
-              <li><strong>Access</strong> — request a copy of all data we hold about you.</li>
-              <li><strong>Correction</strong> — ask us to correct inaccurate data.</li>
-              <li><strong>Deletion</strong> — request deletion of your account and all data.</li>
-              <li><strong>Portability</strong> — request your data in machine-readable format.</li>
-              <li><strong>Objection</strong> — object to specific processing of your data.</li>
-              <li><strong>Withdraw consent</strong> — e.g. location sharing with AI, via settings.</li>
+              <li><strong>Access</strong>{" "}— request a copy of all data we hold about you.</li>
+              <li><strong>Correction</strong>{" "}— ask us to correct inaccurate data.</li>
+              <li><strong>Deletion</strong>{" "}— request deletion of your account and all data.</li>
+              <li><strong>Portability</strong>{" "}— request your data in machine-readable format.</li>
+              <li><strong>Objection</strong>{" "}— object to specific processing of your data.</li>
+              <li><strong>Withdraw consent</strong>{" "}— e.g. location sharing with AI, via settings.</li>
             </ul>
             <p className="mt-2">
               To exercise any of these rights, open an issue on{" "}

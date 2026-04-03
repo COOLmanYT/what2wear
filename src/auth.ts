@@ -71,10 +71,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       name: "Demo Access",
       credentials: {},
       authorize() {
-        // Hard stop: only allow demo sessions in preview environments
+        // Hard stop: only allow demo sessions in preview/development environments
         if (
           process.env.VERCEL_ENV !== "preview" &&
-          process.env.NEXT_PUBLIC_IS_PREVIEW !== "true"
+          process.env.NEXT_PUBLIC_IS_PREVIEW !== "true" &&
+          process.env.NODE_ENV !== "development"
         ) {
           return null;
         }

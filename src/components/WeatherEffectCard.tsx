@@ -149,12 +149,12 @@ export default function WeatherEffectCard({
 
   return (
     <div className={`${className} weather-card weather-card-${condition}`} style={{ ...style, position: "relative", overflow: "hidden" }}>
-      {/* Tinted background overlay */}
-      {condition !== "default" && <div className={`weather-tint weather-tint-${condition}`} />}
+      {/* Tinted background overlay — decorative */}
+      {condition !== "default" && <div className={`weather-tint weather-tint-${condition}`} aria-hidden="true" />}
 
-      {/* Animated particles */}
+      {/* Animated particles — decorative */}
       {particles && (
-        <div className={`weather-particles ${overlayClass}`}>
+        <div className={`weather-particles ${overlayClass}`} aria-hidden="true">
           {particles.map((p) => (
             <span
               key={p.key}
@@ -169,9 +169,9 @@ export default function WeatherEffectCard({
         </div>
       )}
 
-      {/* Wind leaf overlay */}
+      {/* Wind leaf overlay — decorative */}
       {windLeaves && (
-        <div className="weather-particles weather-overlay-wind">
+        <div className="weather-particles weather-overlay-wind" aria-hidden="true">
           {windLeaves.map((l) => (
             <span
               key={l.key}

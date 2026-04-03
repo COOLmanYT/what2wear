@@ -161,14 +161,14 @@ export default function Home() {
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
       {/* Navigation */}
-      <nav className="sticky-nav">
+      <nav className="sticky-nav" aria-label="Main navigation">
         <div className="flex items-center justify-between px-6 py-4 max-w-5xl mx-auto">
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             className="flex items-center gap-2 btn-interact cursor-pointer"
             aria-label="Scroll to top"
           >
-            <span className="text-2xl">🌤️</span>
+            <span className="text-2xl" aria-hidden="true">🌤️</span>
             <span className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>
               Sky Style
             </span>
@@ -201,9 +201,11 @@ export default function Home() {
         </div>
       </nav>
 
+      <main id="main-content">
+
       {/* Hero Section */}
-      <section className="px-6 pt-16 pb-20 text-center max-w-3xl mx-auto">
-        <div className="text-6xl mb-6">🌤️</div>
+      <section className="px-6 pt-16 pb-20 text-center max-w-3xl mx-auto" aria-label="Hero">
+        <div className="text-6xl mb-6" aria-hidden="true">🌤️</div>
         <h1
           className="text-4xl sm:text-5xl font-bold mb-4 leading-tight"
           style={{ color: "var(--foreground)" }}
@@ -240,8 +242,9 @@ export default function Home() {
       </section>
 
       {/* How it works */}
-      <section className="px-6 py-16 max-w-4xl mx-auto">
+      <section className="px-6 py-16 max-w-4xl mx-auto" aria-labelledby="how-it-works-heading">
         <h2
+          id="how-it-works-heading"
           className="text-2xl font-semibold text-center mb-10"
           style={{ color: "var(--foreground)" }}
         >
@@ -273,7 +276,7 @@ export default function Home() {
                 border: "1px solid var(--card-border)",
               }}
             >
-              <div className="text-3xl mb-3">{step.emoji}</div>
+              <div className="text-3xl mb-3" aria-hidden="true">{step.emoji}</div>
               <h3
                 className="font-semibold mb-2"
                 style={{ color: "var(--foreground)" }}
@@ -292,8 +295,9 @@ export default function Home() {
       </section>
 
       {/* Live Demo */}
-      <section id="demo" className="px-6 py-16 max-w-2xl mx-auto">
+      <section id="demo" className="px-6 py-16 max-w-2xl mx-auto" aria-labelledby="demo-heading">
         <h2
+          id="demo-heading"
           className="text-2xl font-semibold text-center mb-2"
           style={{ color: "var(--foreground)" }}
         >
@@ -328,13 +332,15 @@ export default function Home() {
 
           {loading && (
             <div
+              role="status"
+              aria-live="polite"
               className="rounded-2xl p-8 flex flex-col items-center gap-3"
               style={{
                 background: "var(--card)",
                 border: "1px solid var(--card-border)",
               }}
             >
-              <div className="text-3xl animate-bounce">🌤️</div>
+              <div className="text-3xl animate-bounce" aria-hidden="true">🌤️</div>
               <p
                 className="text-sm"
                 style={{ color: "var(--foreground)", opacity: 0.6 }}
@@ -346,6 +352,7 @@ export default function Home() {
 
           {error && !loading && (
             <div
+              role="alert"
               className="rounded-2xl p-4 text-sm"
               style={{
                 background: "#ff3b3015",
@@ -353,12 +360,12 @@ export default function Home() {
                 color: "#ff3b30",
               }}
             >
-              ⚠️ {error}
+              <span aria-hidden="true">⚠️ </span>{error}
             </div>
           )}
 
           {weather && !loading && (
-            <>
+            <div aria-live="polite" aria-atomic="false">
               {/* Weather card */}
               <WeatherEffectCard
                 condition={getWeatherCondition(weather.description)}
@@ -384,7 +391,7 @@ export default function Home() {
                       {weather.description} · feels like {weather.feelsLike}°C
                     </p>
                   </div>
-                  <span className="text-4xl">
+                  <span className="text-4xl" aria-hidden="true">
                     {weatherEmoji(weather.description, weather.isDay)}
                   </span>
                 </div>
@@ -407,7 +414,7 @@ export default function Home() {
                         className="text-xs"
                         style={{ color: "var(--foreground)", opacity: 0.45 }}
                       >
-                        {icon} {label}
+                        <span aria-hidden="true">{icon} </span>{label}
                       </p>
                       <p
                         className="text-sm font-medium mt-0.5"
@@ -448,16 +455,17 @@ export default function Home() {
                     >
                       Per-Source Breakdown
                     </p>
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto" tabIndex={0} aria-label="Per-source weather data — scroll horizontally to see all columns">
                       <table className="w-full text-xs" style={{ color: "var(--foreground)" }}>
+                        <caption className="sr-only">Per-source weather data breakdown</caption>
                         <thead>
                           <tr style={{ opacity: 0.5 }}>
-                            <th className="text-left py-1 pr-2">Source</th>
-                            <th className="text-right py-1 px-1">Temp</th>
-                            <th className="text-right py-1 px-1">Hum.</th>
-                            <th className="text-right py-1 px-1">Wind</th>
-                            <th className="text-right py-1 px-1">Rain</th>
-                            <th className="text-right py-1 px-1">UV</th>
+                            <th scope="col" className="text-left py-1 pr-2">Source</th>
+                            <th scope="col" className="text-right py-1 px-1">Temp</th>
+                            <th scope="col" className="text-right py-1 px-1">Hum.</th>
+                            <th scope="col" className="text-right py-1 px-1">Wind</th>
+                            <th scope="col" className="text-right py-1 px-1">Rain</th>
+                            <th scope="col" className="text-right py-1 px-1">UV</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -471,6 +479,7 @@ export default function Home() {
                                     rel="noopener noreferrer"
                                     className="underline hover:opacity-70"
                                     style={{ color: "var(--accent)" }}
+                                    aria-label={`${s.source} (opens in new tab)`}
                                   >
                                     {s.source}
                                   </a>
@@ -500,7 +509,7 @@ export default function Home() {
                     >
                       Hourly Forecast
                     </p>
-                    <div className="flex gap-2 overflow-x-auto pb-1">
+                    <div className="flex gap-2 overflow-x-auto pb-1" tabIndex={0} role="region" aria-label="Hourly forecast — scroll horizontally">
                       {weather.hourly.filter(h => isHourlyCurrentOrFuture(h.time)).slice(0, HOURLY_FORECAST_LIMIT).map((h, i) => (
                         <div
                           key={i}
@@ -514,10 +523,10 @@ export default function Home() {
                             {h.temp}°
                           </p>
                           <p className="text-xs" style={{ color: "var(--foreground)", opacity: 0.4 }}>
-                            🌧{h.rainChance}%
+                            <span aria-hidden="true">🌧</span>{h.rainChance}%
                           </p>
                           <p className="text-xs" style={{ color: "var(--foreground)", opacity: 0.35 }}>
-                            💨{h.windSpeed}
+                            <span aria-hidden="true">💨</span>{h.windSpeed}
                           </p>
                         </div>
                       ))}
@@ -527,10 +536,11 @@ export default function Home() {
 
                 <div className="flex items-center gap-2 pt-1">
                   <span
-                    className="inline-block w-2 h-2 rounded-full"
+                    className="inline-block w-2 h-2 rounded-full flex-shrink-0"
                     style={{
                       background: ACCURACY_COLOR[weather.accuracyScore],
                     }}
+                    aria-hidden="true"
                   />
                   <span
                     className="text-xs"
@@ -567,7 +577,7 @@ export default function Home() {
                       .map((name) => {
                         const link = SOURCE_LINKS[name];
                         return link ? (
-                          <a key={name} href={link} target="_blank" rel="noopener noreferrer" className="underline hover:opacity-70" style={{ color: "var(--accent)" }}>{name}</a>
+                          <a key={name} href={link} target="_blank" rel="noopener noreferrer" className="underline hover:opacity-70" style={{ color: "var(--accent)" }} aria-label={`${name} (opens in new tab)`}>{name}</a>
                         ) : (
                           <span key={name}>{name}</span>
                         );
@@ -578,7 +588,7 @@ export default function Home() {
                         return acc;
                       }, [])}
                     . Geocoding by{" "}
-                    <a href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener noreferrer" className="underline hover:opacity-70" style={{ color: "var(--accent)" }}>OSM Nominatim</a>.
+                    <a href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener noreferrer" className="underline hover:opacity-70" style={{ color: "var(--accent)" }} aria-label="OSM Nominatim (opens in new tab)">OSM Nominatim</a>.
                   </p>
                 </div>
               </WeatherEffectCard>
@@ -620,14 +630,15 @@ export default function Home() {
                   Sign in for AI recommendations →
                 </Link>
               </WeatherEffectCard>
-            </>
+            </div>
           )}
         </div>
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="px-6 py-16 max-w-6xl mx-auto">
+      <section id="pricing" className="px-6 py-16 max-w-6xl mx-auto" aria-labelledby="pricing-heading">
         <h2
+          id="pricing-heading"
           className="text-2xl font-semibold text-center mb-2"
           style={{ color: "var(--foreground)" }}
         >
@@ -730,9 +741,9 @@ export default function Home() {
 
       {/* Changelog Section */}
       {changelog.length > 0 && (
-        <section className="px-6 py-12 max-w-2xl mx-auto">
+        <section className="px-6 py-12 max-w-2xl mx-auto" aria-labelledby="changelog-heading">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold" style={{ color: "var(--foreground)" }}>
+            <h2 id="changelog-heading" className="text-xl font-semibold" style={{ color: "var(--foreground)" }}>
               Latest from our changelog
               {changelogUnread && (
                 <span
@@ -745,7 +756,7 @@ export default function Home() {
                     display: "inline-block",
                     verticalAlign: "middle",
                   }}
-                  aria-label="New updates"
+                  aria-label="New updates available"
                 />
               )}
             </h2>
@@ -818,7 +829,7 @@ export default function Home() {
       )}
 
       {/* Footer CTA */}
-      <section className="px-6 py-16 text-center">
+      <section className="px-6 py-16 text-center" aria-label="Call to action">
         <h2
           className="text-2xl font-semibold mb-4"
           style={{ color: "var(--foreground)" }}
@@ -833,6 +844,8 @@ export default function Home() {
           Get Started — It&apos;s Free
         </Link>
       </section>
+
+      </main>
 
       {/* Footer */}
       <footer
