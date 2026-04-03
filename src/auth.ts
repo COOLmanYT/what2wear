@@ -1,8 +1,12 @@
 import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
+import Credentials from "next-auth/providers/credentials";
 import { SupabaseAdapter } from "@auth/supabase-adapter";
 import type { Adapter } from "next-auth/adapters";
+
+/** Stable ID used for the demo/preview user. */
+export const DEMO_USER_ID = "demo-tester";
 
 function isValidHttpUrl(str: string): boolean {
   try {
@@ -53,13 +57,47 @@ const rawAdapter =
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
   trustHost: true,
-  providers: [GitHub, Google],
+  providers: [
+    GitHub,
+    Google,
+    /**
+     * Demo credentials provider — active in preview environments only.
+     * The authorize() function acts as an additional server-side hard-stop:
+     * it refuses the request if VERCEL_ENV is "production".
+     */
+    Credentials({
+      id: "demo",
+      name: "Demo Access",
+      credentials: {},
+      authorize() {
+        // Hard stop: never allow demo sessions in production
+        if (process.env.VERCEL_ENV === "production") return null;
+        return {
+          id: DEMO_USER_ID,
+          name: "Tester",
+          email: "demo@skystyle.app",
+          image: null,
+        };
+      },
+    }),
+  ],
   adapter: rawAdapter ? safeAdapter(rawAdapter) : undefined,
   session: { strategy: "jwt" },
   callbacks: {
+    async jwt({ token, user }) {
+      // Attach demo plan flag to the token when a demo user first signs in
+      if (user?.id === DEMO_USER_ID) {
+        token.plan = "demo";
+      }
+      return token;
+    },
     async session({ session, user, token }) {
       if (session.user) {
         session.user.id = user?.id ?? token?.sub ?? "";
+        // Propagate demo plan into the session so API routes can read it
+        if (token?.plan === "demo") {
+          (session.user as Record<string, unknown>).plan = "demo";
+        }
       }
       return session;
     },

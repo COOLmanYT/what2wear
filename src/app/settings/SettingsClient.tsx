@@ -35,6 +35,9 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
   );
   const [shareLocation, setShareLocation] = useState(() => getLocalStorage("skystyle_location_consent", "false") === "true");
   const [weatherOnly, setWeatherOnly] = useState(() => getLocalStorage("skystyle_weather_only", "false") === "true");
+  const [defaultSimpleMode, setDefaultSimpleMode] = useState(
+    () => getLocalStorage("skystyle_simple_mode", "true") === "true"
+  );
 
   // Layout settings
   const [layoutMode, setLayoutMode] = useState<LayoutMode>(
@@ -72,6 +75,7 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
       localStorage.setItem("skystyle_theme_mode", themeMode);
       localStorage.setItem("skystyle_location_consent", String(shareLocation));
       localStorage.setItem("skystyle_weather_only", String(weatherOnly));
+      localStorage.setItem("skystyle_simple_mode", String(defaultSimpleMode));
       localStorage.setItem("skystyle_layout_mode", layoutMode);
       localStorage.setItem("skystyle_extra_spacing", String(extraSpacing));
       localStorage.setItem("skystyle_extra_spacing_pages", extraSpacingPages.join(","));
@@ -253,6 +257,17 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
             <input type="checkbox" checked={weatherOnly} onChange={(e) => setWeatherOnly(e.target.checked)} className="rounded" />
             <span className="text-xs" style={{ color: "var(--foreground)", opacity: 0.6 }}>
               Weather only (skip AI outfit recommendation)
+            </span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={defaultSimpleMode}
+              onChange={(e) => setDefaultSimpleMode(e.target.checked)}
+              className="rounded"
+            />
+            <span className="text-xs" style={{ color: "var(--foreground)", opacity: 0.6 }}>
+              Default to Simple Mode on Terms &amp; Privacy pages (plain-English summaries)
             </span>
           </label>
         </div>

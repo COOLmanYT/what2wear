@@ -6,6 +6,11 @@ export default async function LoginPage() {
   const session = await auth();
   if (session?.user) redirect("/dashboard");
 
+  // Show demo button only in preview environments (never in production)
+  const isPreview =
+    process.env.VERCEL_ENV === "preview" ||
+    process.env.NODE_ENV === "development";
+
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--background)" }}>
       <div
@@ -72,6 +77,31 @@ export default async function LoginPage() {
             Continue with Google
           </button>
         </form>
+
+        {/* Demo Access — preview / development only */}
+        {isPreview && (
+          <form
+            action={async () => {
+              "use server";
+              // Server-side hard stop: block in production regardless of env var
+              if (process.env.VERCEL_ENV === "production") {
+                return;
+              }
+              await signIn("demo", { redirectTo: "/dashboard" });
+            }}
+          >
+            <button
+              type="submit"
+              className="w-full flex items-center justify-center gap-3 rounded-2xl px-5 py-3 text-sm font-medium mt-3 transition-opacity hover:opacity-85"
+              style={{
+                background: "linear-gradient(135deg, #3b7cf4 0%, #ff8c00 100%)",
+                color: "#ffffff",
+              }}
+            >
+              ✨ Demo Access
+            </button>
+          </form>
+        )}
 
         <p className="mt-6 text-xs" style={{ color: "var(--foreground)", opacity: 0.4 }}>
           By continuing, you agree to our{" "}

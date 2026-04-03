@@ -8,6 +8,16 @@ import { handleSignOut } from "@/app/actions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+/** Returns true if version string `a` is strictly greater than `b`. */
+function isVersionGreater(a: string, b: string): boolean {
+  const parse = (v: string) => v.split(".").map(Number);
+  const [aMaj = 0, aMin = 0, aPatch = 0] = parse(a);
+  const [bMaj = 0, bMin = 0, bPatch = 0] = parse(b);
+  if (aMaj !== bMaj) return aMaj > bMaj;
+  if (aMin !== bMin) return aMin > bMin;
+  return aPatch > bPatch;
+}
+
 type LayoutMode = "symmetric" | "large-weather" | "large-settings";
 
 interface HourlyForecast {
@@ -129,6 +139,7 @@ export default function Dashboard({
   const [devChatResult, setDevChatResult] = useState<{ outfit: string; reasoning: string; rawOutput?: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [changelogUnread, setChangelogUnread] = useState(false);
   const router = useRouter();
 
   // Returns the gradient/background for plan-based primary buttons
@@ -206,6 +217,23 @@ export default function Dashboard({
         if (parsed.sourceMode) setSourceMode(parsed.sourceMode);
       }
     } catch { /* ignore */ }
+  }, []);
+
+  // Check for unread changelog entries on mount
+  useEffect(() => {
+    fetch("/api/changelog")
+      .then((r) => r.json())
+      .then((entries: { version: string }[]) => {
+        if (!entries.length) return;
+        const latest = entries[0].version;
+        try {
+          const seen = localStorage.getItem("skystyle_last_seen_changelog");
+          if (!seen || isVersionGreater(latest, seen)) {
+            setChangelogUnread(true);
+          }
+        } catch { /* ignore */ }
+      })
+      .catch(() => { /* ignore */ });
   }, []);
 
   // Save custom sources to localStorage when changed
@@ -608,6 +636,31 @@ export default function Dashboard({
             </nav>
             <hr style={{ borderColor: "var(--card-border)" }} />
             <div className="space-y-1">
+              <Link
+                href="/changelog"
+                className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs btn-interact"
+                style={{ color: "var(--foreground)", opacity: 0.6 }}
+                onClick={() => {
+                  setMenuOpen(false);
+                  setChangelogUnread(false);
+                  try { localStorage.setItem("skystyle_last_seen_changelog", "__dismiss__"); } catch { /* ignore */ }
+                }}
+              >
+                📋 Changelog
+                {changelogUnread && (
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: 7,
+                      height: 7,
+                      borderRadius: "50%",
+                      background: "#ff3b30",
+                      flexShrink: 0,
+                    }}
+                    aria-label="Unread changelog updates"
+                  />
+                )}
+              </Link>
               <Link
                 href="/"
                 className="block rounded-xl px-3 py-2 text-xs btn-interact"
@@ -1840,6 +1893,33 @@ export default function Dashboard({
             style={{ color: "var(--foreground)" }}
           >
             View on GitHub
+          </Link>
+          {" · "}
+          <Link
+            href="/changelog"
+            className="underline hover:opacity-70 inline-flex items-center gap-1"
+            style={{ color: "var(--foreground)" }}
+            onClick={() => {
+              setChangelogUnread(false);
+              try { localStorage.setItem("skystyle_last_seen_changelog", "__dismiss__"); } catch { /* ignore */ }
+            }}
+          >
+            Changelog
+            {changelogUnread && (
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: "#ff3b30",
+                  flexShrink: 0,
+                  verticalAlign: "middle",
+                  marginBottom: 1,
+                }}
+                aria-label="New updates"
+              />
+            )}
           </Link>
           {" · "}
           <Link href="/terms" className="underline hover:opacity-70" style={{ color: "var(--foreground)" }}>
