@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-04-03T00:40:00.000Z",
+    "version": "1.3.1",
+    "title": "Fix build error & add AI changelog instructions",
+    "description": "Fixed TypeScript TS2322 error in the style API route by casting Supabase settings fields to string | undefined. Added AGENTS.md and .github/copilot-instructions.md so AI agents know to update changelog.json after every change."
+  },
+  {
     "date": "2026-04-03T00:00:00.000Z",
     "version": "1.3.0",
     "title": "Changelog & DX Integration",

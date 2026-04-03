@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
 
     isPro = profileResult.data?.is_pro ?? false;
     isDev = profileResult.data?.is_dev ?? false;
-    settings = settingsResult.data ?? {};
+    settings = (settingsResult.data ?? {}) as { unit_preference?: string; custom_system_prompt?: string; custom_source_url?: string };
 
     // Closet: free users can use it 1x/day; Pro/Dev/Demo unlimited-ish
     const rawCloset: string[] = closetResult.data?.items ?? [];
