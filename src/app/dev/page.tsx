@@ -3,11 +3,7 @@ import { redirect } from "next/navigation";
 import PageSpacingWrapper from "@/components/PageSpacingWrapper";
 import DevNavBar from "@/components/DevNavBar";
 import Link from "next/link";
-
-function getDevEmails(): Set<string> {
-  const raw = process.env.DEV_EMAILS ?? "";
-  return new Set(raw.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean));
-}
+import { getDevEmails } from "@/lib/dev-auth";
 
 export default async function DevLandingPage() {
   const session = await auth();

@@ -1,11 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import DevDashboardClient from "@/app/dev/dashboard/DevDashboardClient";
-
-function getDevEmails(): Set<string> {
-  const raw = process.env.DEV_EMAILS ?? "";
-  return new Set(raw.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean));
-}
+import { getDevEmails } from "@/lib/dev-auth";
 
 export const metadata = { title: "Triage — Dev Center" };
 
