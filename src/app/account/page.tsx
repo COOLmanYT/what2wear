@@ -6,6 +6,14 @@ import { getDailyLimitsInfo } from "@/lib/daily-usage";
 import Link from "next/link";
 import PageSpacingWrapper from "@/components/PageSpacingWrapper";
 import AccountUpgradeButton from "@/components/AccountUpgradeButton";
+import SmartBackButton from "@/components/SmartBackButton";
+import SecurityClient from "@/app/settings/security/SecurityClient";
+import PrivacyHubClient from "@/app/settings/privacy/PrivacyHubClient";
+
+function getDevEmails(): Set<string> {
+  const raw = process.env.DEV_EMAILS ?? "";
+  return new Set(raw.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean));
+}
 
 interface DailyLimits {
   ai: { used: number; limit: number | null };
@@ -21,9 +29,12 @@ export default async function AccountPage() {
   const name = session.user.name?.split(" ")[0] ?? session.user.email ?? "there";
   const email = session.user.email ?? "";
   const userId = session.user.id;
+  const isDevEmail = getDevEmails().has(email.toLowerCase());
 
   let isPro = false;
   let isDev = false;
+  let mfaEnabled = false;
+  let pendingDeletion = false;
   let initialCredits: number | null = null;
   let dailyLimits: DailyLimits | null = null;
 
@@ -36,12 +47,23 @@ export default async function AccountPage() {
         .single();
       isPro = data?.is_pro ?? false;
       isDev = data?.is_dev ?? false;
+      pendingDeletion = data?.pending_deletion ?? false;
       if (isPro) {
         initialCredits = await getCredits(userId);
       }
       dailyLimits = await getDailyLimitsInfo(userId, isPro, isDev);
     } catch { /* Non-fatal */ }
+    try {
+      const { data: mfaRow } = await supabaseAdmin
+        .from("mfa_secrets")
+        .select("enabled")
+        .eq("user_id", userId)
+        .single();
+      mfaEnabled = mfaRow?.enabled ?? false;
+    } catch { /* Non-fatal */ }
   }
+
+  const canAccessDevDashboard = isDevEmail || isDev;
 
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
@@ -53,18 +75,15 @@ export default async function AccountPage() {
       >
         <div className="flex items-center justify-between max-w-6xl mx-auto">
           <div className="flex items-center gap-3">
-            <Link
-              href="/dashboard"
-              className="text-sm btn-interact rounded-xl px-3 py-2"
-              style={{ color: "var(--foreground)", opacity: 0.6 }}
-            >
-              ← Dashboard
-            </Link>
+            <SmartBackButton fallback="/dashboard" label="← Dashboard" />
             <span className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>
               <span aria-hidden="true">👤 </span>Account
             </span>
           </div>
           <div className="flex items-center gap-2">
+            {canAccessDevDashboard && (
+              <Link href="/dev" className="text-xs btn-interact rounded-xl px-3 py-2 hidden sm:block font-medium" style={{ background: "#ff9500", color: "#fff" }}>🛠️ Dev Dashboard</Link>
+            )}
             <Link href="/settings" className="text-xs btn-interact rounded-xl px-3 py-2 hidden sm:block" style={{ color: "var(--foreground)", opacity: 0.5 }}>Settings</Link>
             <Link href="/settings/security" className="text-xs btn-interact rounded-xl px-3 py-2 hidden sm:block" style={{ color: "var(--foreground)", opacity: 0.5 }}>Security</Link>
             <Link href="/settings/privacy" className="text-xs btn-interact rounded-xl px-3 py-2 hidden sm:block" style={{ color: "var(--foreground)", opacity: 0.5 }}>Privacy</Link>
@@ -330,6 +349,29 @@ export default async function AccountPage() {
           <Link href="/terms" className="underline hover:opacity-70">Terms</Link>
           <Link href="/privacy" className="underline hover:opacity-70">Privacy</Link>
         </div>
+
+        {/* ── Security ── */}
+        <div className="max-w-3xl mx-auto space-y-2">
+          <h2
+            className="text-xs font-semibold uppercase tracking-widest px-1"
+            style={{ color: "var(--foreground)", opacity: 0.4 }}
+          >
+            🛡️ Security
+          </h2>
+          <SecurityClient mfaEnabled={mfaEnabled} embedded />
+        </div>
+
+        {/* ── Privacy ── */}
+        <div className="max-w-3xl mx-auto space-y-2">
+          <h2
+            className="text-xs font-semibold uppercase tracking-widest px-1"
+            style={{ color: "var(--foreground)", opacity: 0.4 }}
+          >
+            🔐 Privacy &amp; Data
+          </h2>
+          <PrivacyHubClient isPendingDeletion={pendingDeletion} embedded />
+        </div>
+
       </PageSpacingWrapper>
       </main>
     </div>
