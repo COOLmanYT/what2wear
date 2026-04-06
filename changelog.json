@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-04-06T03:03:56.230Z",
+    "version": "2.2.1",
+    "title": "Fix Vercel Next.js detection for apps/web",
+    "description": "Added apps/web package.json and lockfile so Vercel can detect Next.js when Root Directory is set to apps/web."
+  },
+  {
     "date": "2026-04-06T02:33:46.830Z",
     "version": "2.2.0",
     "title": "Monorepo architecture for web, docs, and API",
