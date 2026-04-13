@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-04-13T01:51:56.000Z",
+    "version": "2.5.0",
+    "title": "AI planning integration, closet links, BYOK Gemini, Pro prompt",
+    "description": "Inject weather planning data (time slots + complexity) into AI prompts, render closet items as links in outfit text, add /closet page with lock at <15 items, BYOK Gemini support, and Pro client-side custom prompt."
+  },
+  {
     "date": "2026-04-13T01:43:16.000Z",
     "version": "2.4.0",
     "title": "Weather Planning UI panel",

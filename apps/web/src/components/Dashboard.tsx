@@ -152,6 +152,9 @@ export default function Dashboard({
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackCategory, setFeedbackCategory] = useState<string | undefined>(undefined);
   const [simpleMode, setSimpleMode] = useState(true);
+  // BYOK enhancements — provider selector + client-side custom prompt (Pro/Dev)
+  const [byokProvider, setByokProvider] = useState<"openai" | "gemini">("openai");
+  const [clientCustomPrompt, setClientCustomPrompt] = useState("");
   const router = useRouter();
 
   // Returns the gradient/background CSS class for plan-based primary buttons
@@ -235,6 +238,13 @@ export default function Dashboard({
 
       const savedSimpleMode = localStorage.getItem("skystyle_simple_mode");
       if (savedSimpleMode !== null) setSimpleMode(savedSimpleMode === "true");
+
+      const savedByokProvider = localStorage.getItem("skystyle_byok_provider");
+      if (savedByokProvider === "gemini") setByokProvider("gemini");
+      else setByokProvider("openai");
+
+      const savedClientCustomPrompt = localStorage.getItem("skystyle_byok_custom_prompt");
+      if (savedClientCustomPrompt !== null) setClientCustomPrompt(savedClientCustomPrompt);
     } catch {
       /* ignore */
     }
@@ -461,6 +471,19 @@ export default function Dashboard({
     setAiLoading(true);
 
     const effectiveGender = gender === "Other - Manual" ? customGender.slice(0, MAX_GENDER_LENGTH) : gender;
+
+    // Read planning data from localStorage (managed by WeatherPlanningPanel)
+    let planningData: unknown = undefined;
+    try {
+      const raw = localStorage.getItem("skystyle_planning_panel");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && Array.isArray(parsed.slots)) {
+          planningData = { slots: parsed.slots, complexity: parsed.complexity ?? 0 };
+        }
+      }
+    } catch { /* ignore — planning data is optional */ }
+
     // Both requests start immediately (parallel)
     const weatherPromise = fetch(`/api/weather?lat=${location.lat}&lon=${location.lon}`);
     const stylePromise = fetch("/api/style", {
@@ -469,7 +492,9 @@ export default function Dashboard({
       body: JSON.stringify({
         lat: location.lat, lon: location.lon, gender: effectiveGender, shareLocation, forceCloset,
         unitPreference: userUnitPreference, sourceMode, customSources,
-        ...(userApiKey ? { userApiKey } : {}),
+        ...(userApiKey ? { userApiKey, byokProvider } : {}),
+        ...(clientCustomPrompt ? { clientCustomPrompt } : {}),
+        ...(planningData ? { planningData } : {}),
       }),
     });
 
@@ -500,7 +525,7 @@ export default function Dashboard({
     } finally {
       setAiLoading(false);
     }
-  }, [location, weatherOnly, gender, customGender, shareLocation, forceCloset, isPro, userUnitPreference, sourceMode, customSources, userApiKey]);
+  }, [location, weatherOnly, gender, customGender, shareLocation, forceCloset, isPro, userUnitPreference, sourceMode, customSources, userApiKey, byokProvider, clientCustomPrompt]);
 
   async function handleFollowUp(e: React.FormEvent) {
     e.preventDefault();
@@ -621,6 +646,37 @@ export default function Dashboard({
     : layoutMode === "large-weather" ? 1.5
     : layoutMode === "large-settings" ? 1
     : 1; // symmetric
+
+  /** Renders outfit text with matching closet item names as clickable underlined links */
+  function renderOutfitWithClosetLinks(text: string, items: string[]): React.ReactNode {
+    if (!items.length) return text;
+    // Sort by length descending so longer matches take priority
+    const sorted = [...items].sort((a, b) => b.length - a.length);
+    const escaped = sorted.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    const regex = new RegExp(`(${escaped.join("|")})`, "gi");
+    const parts = text.split(regex);
+    return parts.map((part, i) => {
+      const matched = sorted.find((item) => item.toLowerCase() === part.toLowerCase());
+      if (matched) {
+        return (
+          <a
+            key={i}
+            href="#closet-section"
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById("closet-section")?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="underline cursor-pointer hover:opacity-70"
+            style={{ color: "var(--accent)" }}
+            aria-label={`View ${part} in your closet`}
+          >
+            {part}
+          </a>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
+  }
   const rightFlex = customSpacingEnabled
     ? 1
     : layoutMode === "large-settings" ? 1.5
@@ -1259,7 +1315,7 @@ export default function Dashboard({
                       className="text-base leading-relaxed"
                       style={{ color: "var(--foreground)" }}
                     >
-                      {rec!.outfit}
+                      {renderOutfitWithClosetLinks(rec!.outfit, closetItems)}
                     </p>
                     {rec!.reasoning && (
                       <>
@@ -1641,6 +1697,7 @@ export default function Dashboard({
 
             {/* ── Closet Management ── */}
             <div
+              id="closet-section"
               className="rounded-2xl p-4 space-y-3"
               style={{
                 background: "var(--card)",
@@ -2052,8 +2109,39 @@ export default function Dashboard({
                 >
                   🔑 Bring Your Own Key
                 </p>
+
+                {/* AI provider selector */}
+                <div>
+                  <p className="text-xs mb-1.5" style={{ color: "var(--foreground)", opacity: 0.55 }}>
+                    AI provider for your key
+                  </p>
+                  <div className="flex gap-2">
+                    {(["openai", "gemini"] as const).map((prov) => (
+                      <button
+                        key={prov}
+                        type="button"
+                        onClick={() => {
+                          setByokProvider(prov);
+                          try { localStorage.setItem("skystyle_byok_provider", prov); } catch { /* ignore */ }
+                        }}
+                        className="rounded-xl px-3 py-1.5 text-xs font-medium btn-interact"
+                        style={{
+                          background: byokProvider === prov ? "var(--accent)" : "var(--background)",
+                          color: byokProvider === prov ? "#fff" : "var(--foreground)",
+                          border: "1px solid var(--card-border)",
+                        }}
+                      >
+                        {prov === "openai" ? "🤖 OpenAI" : "✨ Gemini"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <p className="text-xs" style={{ color: "var(--foreground)", opacity: 0.55 }}>
-                  Provide your own OpenAI API key. Stored locally on your device only — never sent to Sky Style servers.
+                  {byokProvider === "openai"
+                    ? "Provide your OpenAI API key (sk-…)."
+                    : "Provide your Google Gemini API key."}{" "}
+                  Stored locally on your device only — never sent to Sky Style servers.
                 </p>
                 <input
                   type="password"
@@ -2063,7 +2151,7 @@ export default function Dashboard({
                     setUserApiKey(val);
                     try { localStorage.setItem("skystyle_byok_key", val); } catch { /* ignore */ }
                   }}
-                  placeholder="sk-… (optional)"
+                  placeholder={byokProvider === "openai" ? "sk-… (optional)" : "AI… (optional)"}
                   autoComplete="off"
                   className="w-full rounded-xl px-3 py-2 text-xs outline-none"
                   style={{
@@ -2084,6 +2172,47 @@ export default function Dashboard({
                     Clear key
                   </button>
                 )}
+
+                {/* Custom AI prompt (Pro/Dev) */}
+                <div className="space-y-1.5 pt-1">
+                  <p
+                    className="text-xs font-semibold uppercase tracking-widest"
+                    style={{ color: "var(--foreground)", opacity: 0.4 }}
+                  >
+                    ✏️ Custom AI Prompt
+                  </p>
+                  <p className="text-xs" style={{ color: "var(--foreground)", opacity: 0.5 }}>
+                    Replaces the default Sky Style prompt. Must include JSON output instructions. Stored locally only.
+                  </p>
+                  <textarea
+                    value={clientCustomPrompt}
+                    onChange={(e) => {
+                      const val = e.target.value.slice(0, 1000);
+                      setClientCustomPrompt(val);
+                      try { localStorage.setItem("skystyle_byok_custom_prompt", val); } catch { /* ignore */ }
+                    }}
+                    placeholder={`Leave blank to use the default Sky Style prompt…`}
+                    rows={4}
+                    className="w-full rounded-xl px-3 py-2 text-xs outline-none resize-none"
+                    style={{
+                      background: "var(--background)",
+                      color: "var(--foreground)",
+                      border: "1px solid var(--card-border)",
+                    }}
+                  />
+                  {clientCustomPrompt && (
+                    <button
+                      onClick={() => {
+                        setClientCustomPrompt("");
+                        try { localStorage.removeItem("skystyle_byok_custom_prompt"); } catch { /* ignore */ }
+                      }}
+                      className="text-xs btn-interact rounded-lg px-2 py-1"
+                      style={{ color: "#ff3b30" }}
+                    >
+                      Clear prompt
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 

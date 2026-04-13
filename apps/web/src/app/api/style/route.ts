@@ -13,7 +13,7 @@ import { auth } from "@/auth";
 import { DEMO_USER_ID } from "@/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getWeather, CustomSource, SourceMode, MAX_CUSTOM_SOURCES } from "@/lib/weather";
-import { getStyleRecommendation, getDevChatResponse } from "@/lib/ai";
+import { getStyleRecommendation, getDevChatResponse, PlanningData } from "@/lib/ai";
 import { deductCredit, getCredits } from "@/lib/credits";
 import { incrementUsage, canUseFeature, getDailyLimitsInfo } from "@/lib/daily-usage";
 import { syncPublicUser } from "@/lib/sync-user";
@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
     lat?: number; lon?: number; userApiKey?: string; gender?: string;
     shareLocation?: boolean; forceCloset?: boolean; unitPreference?: string;
     devMessage?: string; sourceMode?: string; customSources?: CustomSource[];
+    planningData?: unknown; clientCustomPrompt?: string; byokProvider?: string;
   };
   try {
     body = await req.json();
@@ -48,6 +49,9 @@ export async function POST(req: NextRequest) {
   }
 
   const { lat, lon, userApiKey, gender, shareLocation, forceCloset, devMessage } = body;
+  // Validate BYOK provider
+  const byokProvider: "openai" | "gemini" =
+    body.byokProvider === "gemini" ? "gemini" : "openai";
   if (typeof lat !== "number" || typeof lon !== "number" || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
     return NextResponse.json(
       { error: "lat must be between -90 and 90, lon between -180 and 180" },
@@ -99,6 +103,11 @@ export async function POST(req: NextRequest) {
   const customSystemPrompt: string | undefined = (isPro || isDev)
     ? settings.custom_system_prompt ?? undefined
     : undefined;
+  // Client-side custom prompt: only accept from Pro/Dev users, max 1000 chars
+  const clientCustomPrompt: string | undefined =
+    (isPro || isDev) && typeof body.clientCustomPrompt === "string" && body.clientCustomPrompt.trim()
+      ? body.clientCustomPrompt.trim().slice(0, 1000)
+      : undefined;
   const customSourceUrl: string | undefined = (isPro || isDev)
     ? settings.custom_source_url ?? undefined
     : undefined;
@@ -171,6 +180,34 @@ export async function POST(req: NextRequest) {
       ).slice(0, MAX_CUSTOM_SOURCES)
     : [];
 
+  // Validate and sanitize planning data from client
+  let planningData: PlanningData | undefined;
+  if (
+    body.planningData !== null &&
+    typeof body.planningData === "object" &&
+    Array.isArray((body.planningData as Record<string, unknown>).slots)
+  ) {
+    const raw = body.planningData as Record<string, unknown>;
+    const rawComplexity = raw.complexity;
+    const complexity = typeof rawComplexity === "number"
+      ? Math.max(0, Math.min(3, Math.round(rawComplexity)))
+      : 0;
+    const VALID_ENVS = new Set(["outside", "inside", "hybrid"]);
+    const slots = (raw.slots as unknown[])
+      .filter((s): s is Record<string, unknown> => typeof s === "object" && s !== null)
+      .filter((s) => VALID_ENVS.has(s.environment as string))
+      .slice(0, 10)
+      .map((s) => ({
+        startTime: String(s.startTime ?? "").replace(/[^0-9:]/g, "").slice(0, 5),
+        endTime: String(s.endTime ?? "").replace(/[^0-9:]/g, "").slice(0, 5),
+        environment: String(s.environment),
+        temperature: String(s.temperature ?? "").replace(/[\n\r]/g, "").slice(0, 20),
+      }));
+    if (slots.length > 0) {
+      planningData = { slots, complexity };
+    }
+  }
+
   // 5. Fetch weather
   let weather;
   try {
@@ -188,12 +225,15 @@ export async function POST(req: NextRequest) {
       closetItems,
       unitPreference,
       customSystemPrompt,
+      clientCustomPrompt,
       userApiKey: (isPro || isDev) ? userApiKey : undefined,
+      byokProvider: (isPro || isDev) ? byokProvider : undefined,
       gender: typeof gender === "string" ? gender.slice(0, 30) : undefined,
       shareLocation: shareLocation === true,
       forceCloset: forceCloset === true,
       isDev,
       customContext: weather.customContext,
+      planningData,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "AI request failed";
