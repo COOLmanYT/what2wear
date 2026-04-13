@@ -284,7 +284,11 @@ export default function WeatherPlanningPanel({ onChange }: Props) {
 
       {/* ── Collapsible body ── */}
       <div className={`planning-panel-body${open ? "" : " collapsed"}`}>
-        <div className="planning-panel-inner">
+        <div
+          className="planning-panel-inner"
+          aria-hidden={!open}
+          inert={open ? undefined : true}
+        >
           <div
             className="px-4 pb-4 space-y-4"
             style={{ borderTop: "1px solid var(--card-border)" }}
