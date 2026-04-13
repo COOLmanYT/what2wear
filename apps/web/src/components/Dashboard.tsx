@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import LocationPicker, { ResolvedLocation } from "./LocationPicker";
+import WeatherPlanningPanel from "./WeatherPlanningPanel";
 import WeatherEffectCard, { getWeatherCondition, formatHourlyTime, isHourlyCurrentOrFuture, HOURLY_FORECAST_LIMIT } from "./WeatherEffectCard";
 import UpgradePlanModal from "./UpgradePlanModal";
 import FeedbackModal from "./FeedbackModal";
@@ -827,6 +828,9 @@ export default function Dashboard({
             className="space-y-5 min-w-0"
             style={{ flex: leftFlex }}
           >
+            {/* ── Weather Planning Panel ── */}
+            <WeatherPlanningPanel />
+
             {/* ── Location Picker ── */}
             <LocationPicker onLocationResolved={handleLocationResolved} />
 

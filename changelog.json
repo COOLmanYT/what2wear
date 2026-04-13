@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-04-13T01:43:16.000Z",
+    "version": "2.4.0",
+    "title": "Weather Planning UI panel",
+    "description": "Added a collapsible Weather Planning panel above location input with time slots, per-slot environment types, indoor temperature inputs, and a recommendation complexity slider."
+  },
+  {
     "date": "2026-04-06T03:25:05.652Z",
     "version": "2.3.0",
     "title": "Sky Style docs launch and theming",
