@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-04-13T02:14:50.000Z",
+    "version": "2.5.1",
+    "title": "Polish & performance pass (SKY-1C)",
+    "description": "Smooth CSS collapse animation on planning panel, hydration flash fix, memoized closet-link regex, whitespace-pre-line on outfit text, and code clarity improvements."
+  },
+  {
     "date": "2026-04-13T01:51:56.000Z",
     "version": "2.5.0",
     "title": "AI planning integration, closet links, BYOK Gemini, Pro prompt",

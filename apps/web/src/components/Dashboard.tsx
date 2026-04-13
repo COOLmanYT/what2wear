@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import LocationPicker, { ResolvedLocation } from "./LocationPicker";
 import WeatherPlanningPanel from "./WeatherPlanningPanel";
 import WeatherEffectCard, { getWeatherCondition, formatHourlyTime, isHourlyCurrentOrFuture, HOURLY_FORECAST_LIMIT } from "./WeatherEffectCard";
@@ -646,14 +646,26 @@ export default function Dashboard({
     : layoutMode === "large-weather" ? 1.5
     : layoutMode === "large-settings" ? 1
     : 1; // symmetric
+  const rightFlex = customSpacingEnabled
+    ? 1
+    : layoutMode === "large-settings" ? 1.5
+    : 1; // symmetric or large-weather
 
-  /** Renders outfit text with matching closet item names as clickable underlined links */
-  function renderOutfitWithClosetLinks(text: string, items: string[]): React.ReactNode {
-    if (!items.length) return text;
-    // Sort by length descending so longer matches take priority
-    const sorted = [...items].sort((a, b) => b.length - a.length);
+  // Pre-build the closet-items regex whenever the closet changes, avoiding per-render reconstruction
+  const closetLinksData = useMemo(() => {
+    if (!closetItems.length) return null;
+    const sorted = [...closetItems].sort((a, b) => b.length - a.length);
     const escaped = sorted.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
     const regex = new RegExp(`(${escaped.join("|")})`, "gi");
+    return { sorted, regex };
+  }, [closetItems]);
+
+  /** Renders outfit text with matching closet item names as clickable underlined links */
+  const renderOutfitWithClosetLinks = useCallback((text: string): React.ReactNode => {
+    if (!closetLinksData) return text;
+    const { sorted, regex } = closetLinksData;
+    // Reset lastIndex in case of reuse (split doesn't reset it automatically on all runtimes)
+    regex.lastIndex = 0;
     const parts = text.split(regex);
     return parts.map((part, i) => {
       const matched = sorted.find((item) => item.toLowerCase() === part.toLowerCase());
@@ -676,11 +688,7 @@ export default function Dashboard({
       }
       return <span key={i}>{part}</span>;
     });
-  }
-  const rightFlex = customSpacingEnabled
-    ? 1
-    : layoutMode === "large-settings" ? 1.5
-    : 1; // symmetric or large-weather
+  }, [closetLinksData]);
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--background)" }}>
@@ -1312,10 +1320,10 @@ export default function Dashboard({
                       Outfit Recommendation
                     </h2>
                     <p
-                      className="text-base leading-relaxed"
+                      className="text-base leading-relaxed whitespace-pre-line"
                       style={{ color: "var(--foreground)" }}
                     >
-                      {renderOutfitWithClosetLinks(rec!.outfit, closetItems)}
+                      {renderOutfitWithClosetLinks(rec!.outfit)}
                     </p>
                     {rec!.reasoning && (
                       <>

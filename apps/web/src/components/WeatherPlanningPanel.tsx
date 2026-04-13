@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -172,6 +172,8 @@ export default function WeatherPlanningPanel({ onChange }: Props) {
   const [open, setOpen] = useState(false);
   const [slots, setSlots] = useState<TimeSlot[]>([newSlot()]);
   const [complexity, setComplexity] = useState<ComplexityLevel>(0);
+  // Prevents showing stale default slot summary before localStorage has loaded
+  const [mounted, setMounted] = useState(false);
 
   // Load persisted state on mount
   useEffect(() => {
@@ -184,6 +186,7 @@ export default function WeatherPlanningPanel({ onChange }: Props) {
         if (parsed.open != null) setOpen(parsed.open as boolean);
       }
     } catch { /* ignore */ }
+    setMounted(true);
   }, []);
 
   // Persist and notify parent on state changes
@@ -232,9 +235,10 @@ export default function WeatherPlanningPanel({ onChange }: Props) {
   }
 
   // Build a short summary string for the collapsed header
-  const slotSummary = slots
-    .map((s) => `${formatSlotTime(s.startTime)}–${formatSlotTime(s.endTime)}`)
-    .join(", ");
+  const slotSummary = useMemo(
+    () => slots.map((s) => `${formatSlotTime(s.startTime)}–${formatSlotTime(s.endTime)}`).join(", "),
+    [slots]
+  );
 
   return (
     <div
@@ -255,7 +259,7 @@ export default function WeatherPlanningPanel({ onChange }: Props) {
       >
         <span className="flex items-center gap-2">
           <span>🗓️ Weather Planning</span>
-          {!open && slots.length > 0 && (
+          {!open && mounted && slots.length > 0 && (
             <span
               className="text-xs font-normal truncate max-w-[180px]"
               style={{ color: "var(--foreground)", opacity: 0.45 }}
@@ -279,89 +283,91 @@ export default function WeatherPlanningPanel({ onChange }: Props) {
       </button>
 
       {/* ── Collapsible body ── */}
-      {open && (
-        <div
-          className="px-4 pb-4 space-y-4"
-          style={{ borderTop: "1px solid var(--card-border)" }}
-        >
-          {/* ── Time slots ── */}
-          <div className="space-y-2 pt-3">
-            <p className="text-xs font-semibold uppercase tracking-wide opacity-50" style={{ color: "var(--foreground)" }}>
-              Time Slots
-            </p>
-            {slots.map((slot) => (
-              <SlotRow
-                key={slot.id}
-                slot={slot}
-                onChange={handleSlotChange}
-                onRemove={() => handleRemoveSlot(slot.id)}
-                canRemove={slots.length > 1}
-              />
-            ))}
-            <button
-              type="button"
-              onClick={handleAddSlot}
-              className="w-full rounded-xl py-2 text-xs font-medium transition-opacity hover:opacity-70"
-              style={{
-                background: "var(--background)",
-                border: "1px dashed var(--card-border)",
-                color: "var(--foreground)",
-                opacity: 0.7,
-              }}
-            >
-              + Add Time Slot
-            </button>
-          </div>
-
-          {/* ── Complexity slider ── */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
+      <div className={`planning-panel-body${open ? "" : " collapsed"}`}>
+        <div className="planning-panel-inner">
+          <div
+            className="px-4 pb-4 space-y-4"
+            style={{ borderTop: "1px solid var(--card-border)" }}
+          >
+            {/* ── Time slots ── */}
+            <div className="space-y-2 pt-3">
               <p className="text-xs font-semibold uppercase tracking-wide opacity-50" style={{ color: "var(--foreground)" }}>
-                Recommendation Mode
+                Time Slots
               </p>
-              <span
-                className="text-xs font-semibold px-2 py-0.5 rounded-full"
+              {slots.map((slot) => (
+                <SlotRow
+                  key={slot.id}
+                  slot={slot}
+                  onChange={handleSlotChange}
+                  onRemove={() => handleRemoveSlot(slot.id)}
+                  canRemove={slots.length > 1}
+                />
+              ))}
+              <button
+                type="button"
+                onClick={handleAddSlot}
+                className="w-full rounded-xl py-2 text-xs font-medium transition-opacity hover:opacity-70"
                 style={{
-                  background: "var(--accent)",
-                  color: "#fff",
-                  opacity: 0.9,
+                  background: "var(--background)",
+                  border: "1px dashed var(--card-border)",
+                  color: "var(--foreground)",
+                  opacity: 0.7,
                 }}
               >
-                {COMPLEXITY_LABELS[complexity]}
-              </span>
+                + Add Time Slot
+              </button>
             </div>
 
-            <div className="px-1">
-              <input
-                type="range"
-                min={0}
-                max={3}
-                step={1}
-                value={complexity}
-                onChange={(e) => handleComplexity(Number(e.target.value))}
-                className="w-full accent-[var(--accent)] cursor-pointer"
-                aria-label="Recommendation complexity level"
-                aria-valuetext={COMPLEXITY_LABELS[complexity]}
-              />
-              <div className="flex justify-between mt-1">
-                {([0, 1, 2, 3] as ComplexityLevel[]).map((lvl) => (
-                  <span
-                    key={lvl}
-                    className="text-[10px]"
-                    style={{
-                      color: "var(--foreground)",
-                      opacity: complexity === lvl ? 0.9 : 0.35,
-                      fontWeight: complexity === lvl ? 600 : 400,
-                    }}
-                  >
-                    {COMPLEXITY_LABELS[lvl]}
-                  </span>
-                ))}
+            {/* ── Complexity slider ── */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide opacity-50" style={{ color: "var(--foreground)" }}>
+                  Recommendation Mode
+                </p>
+                <span
+                  className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                  style={{
+                    background: "var(--accent)",
+                    color: "#fff",
+                    opacity: 0.9,
+                  }}
+                >
+                  {COMPLEXITY_LABELS[complexity]}
+                </span>
+              </div>
+
+              <div className="px-1">
+                <input
+                  type="range"
+                  min={0}
+                  max={3}
+                  step={1}
+                  value={complexity}
+                  onChange={(e) => handleComplexity(Number(e.target.value))}
+                  className="w-full accent-[var(--accent)] cursor-pointer"
+                  aria-label="Recommendation complexity level"
+                  aria-valuetext={COMPLEXITY_LABELS[complexity]}
+                />
+                <div className="flex justify-between mt-1">
+                  {([0, 1, 2, 3] as ComplexityLevel[]).map((lvl) => (
+                    <span
+                      key={lvl}
+                      className="text-[10px]"
+                      style={{
+                        color: "var(--foreground)",
+                        opacity: complexity === lvl ? 0.9 : 0.35,
+                        fontWeight: complexity === lvl ? 600 : 400,
+                      }}
+                    >
+                      {COMPLEXITY_LABELS[lvl]}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
