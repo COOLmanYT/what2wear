@@ -1,5 +1,29 @@
 [
   {
+    "date": "2026-04-13T02:24:34.000Z",
+    "version": "2.5.2",
+    "title": "Export cooldown system (SKY-1D)",
+    "description": "Add 12-hour localStorage-based cooldown after data export for regular users. Dev users bypass the cooldown. Countdown displayed in Privacy Hub."
+  },
+  {
+    "date": "2026-04-13T02:14:50.000Z",
+    "version": "2.5.1",
+    "title": "Polish & performance pass (SKY-1C)",
+    "description": "Smooth CSS collapse animation on planning panel, hydration flash fix, memoized closet-link regex, whitespace-pre-line on outfit text, and code clarity improvements."
+  },
+  {
+    "date": "2026-04-13T01:51:56.000Z",
+    "version": "2.5.0",
+    "title": "AI planning integration, closet links, BYOK Gemini, Pro prompt",
+    "description": "Inject weather planning data (time slots + complexity) into AI prompts, render closet items as links in outfit text, add /closet page with lock at <15 items, BYOK Gemini support, and Pro client-side custom prompt."
+  },
+  {
+    "date": "2026-04-13T01:43:16.000Z",
+    "version": "2.4.0",
+    "title": "Weather Planning UI panel",
+    "description": "Added a collapsible Weather Planning panel above location input with time slots, per-slot environment types, indoor temperature inputs, and a recommendation complexity slider."
+  },
+  {
     "date": "2026-04-06T03:25:05.652Z",
     "version": "2.3.0",
     "title": "Sky Style docs launch and theming",

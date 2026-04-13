@@ -40,6 +40,21 @@ Your response MUST be a JSON object with exactly two keys:
 
 Be specific (name garment types, colours, materials). Be friendly and concise. DO NOT output anything excluding the JSON object, such as "Here is the JSON you requested".`;
 
+/** A single time-slot entry from the weather planning panel */
+export interface PlanningSlot {
+  startTime: string;   // "HH:MM"
+  endTime: string;     // "HH:MM"
+  environment: string; // "outside" | "inside" | "hybrid"
+  temperature: string; // free-text indoor temp; only relevant for inside/hybrid
+}
+
+/** Structured planning data from the WeatherPlanningPanel (localStorage) */
+export interface PlanningData {
+  slots: PlanningSlot[];
+  /** 0=Simple, 1=Simple+, 2=Advanced, 3=Pro */
+  complexity: number;
+}
+
 export interface StyleInput {
   weather: WeatherData;
   closetItems: string[];
@@ -47,6 +62,10 @@ export interface StyleInput {
   customSystemPrompt?: string;
   /** Pro BYOK: user-provided AI API key (not saved, used for this request only) */
   userApiKey?: string;
+  /** Pro/Dev client-side custom prompt (localStorage only, never persisted server-side) */
+  clientCustomPrompt?: string;
+  /** Which provider to use for the BYOK key ("openai" | "gemini", defaults to "openai") */
+  byokProvider?: "openai" | "gemini";
   /** Gender context for recommendations (e.g. "Male", "Female", "N/A", or custom text) */
   gender?: string;
   /** Whether the user consented to share their location with the AI */
@@ -57,6 +76,8 @@ export interface StyleInput {
   isDev?: boolean;
   /** Additional context from user's custom sources (RSS content, URL references) */
   customContext?: string[];
+  /** Weather planning data from the planning panel */
+  planningData?: PlanningData;
 }
 
 export interface FollowUpInput {
@@ -101,7 +122,10 @@ function formatWind(kmh: number, unit: "metric" | "imperial"): string {
 export async function getStyleRecommendation(
   input: StyleInput
 ): Promise<StyleRecommendation> {
-  const { weather, closetItems, unitPreference, customSystemPrompt, userApiKey, gender, shareLocation, forceCloset, customContext } = input;
+  const {
+    weather, closetItems, unitPreference, customSystemPrompt, clientCustomPrompt,
+    userApiKey, byokProvider, gender, shareLocation, forceCloset, customContext, planningData,
+  } = input;
   let closetWarning: string | undefined;
   if (forceCloset) {
     if (closetItems.length === 0) {
@@ -111,7 +135,8 @@ export async function getStyleRecommendation(
     }
   }
 
-  const systemPrompt = customSystemPrompt ?? DEFAULT_SYSTEM_PROMPT;
+  // Client-side custom prompt takes precedence over DB-stored one (Pro/Dev only)
+  const systemPrompt = clientCustomPrompt ?? customSystemPrompt ?? DEFAULT_SYSTEM_PROMPT;
 
   const closetSection =
     closetItems.length > 0
@@ -165,6 +190,44 @@ export async function getStyleRecommendation(
     ? `\n- Data source: ${weather.source} (station: ${weather.stationName}, ${weather.stationDistanceKm} km away — accuracy: ${weather.accuracyScore})`
     : `\n- Data source: ${weather.source} (accuracy: ${weather.accuracyScore})`;
 
+  // Weather planning context — time slots with environment type and indoor temperature
+  const VALID_ENVS = new Set(["outside", "inside", "hybrid"]);
+  let planningSection = "";
+  if (planningData && Array.isArray(planningData.slots) && planningData.slots.length > 0) {
+    const formattedSlots = planningData.slots
+      .filter(
+        (s) =>
+          typeof s.startTime === "string" &&
+          typeof s.endTime === "string" &&
+          VALID_ENVS.has(s.environment)
+      )
+      .map((s) => {
+        const safeStart = s.startTime.replace(/[^0-9:]/g, "").slice(0, 5);
+        const safeEnd = s.endTime.replace(/[^0-9:]/g, "").slice(0, 5);
+        const env = s.environment as string;
+        const tempNote =
+          (env === "inside" || env === "hybrid") && s.temperature
+            ? `, indoor temp: approx. ${s.temperature.replace(/[\n\r]/g, "").slice(0, 20)}`
+            : "";
+        return `- ${safeStart}–${safeEnd}: ${env.charAt(0).toUpperCase() + env.slice(1)}${tempNote}`;
+      });
+    if (formattedSlots.length > 0) {
+      planningSection = `\n\nTime-based planning context:\n${formattedSlots.join("\n")}`;
+    }
+  }
+
+  // Complexity modifier — shapes the detail level of the AI response
+  const COMPLEXITY_INSTRUCTIONS: Record<number, string> = {
+    0: "Keep your recommendation brief and easy to read (2–3 sentences maximum).",
+    1: "Provide a clear recommendation with a short explanation.",
+    2: "Provide a detailed recommendation with reasoning about layering and accessories.",
+    3: "Provide a comprehensive recommendation with full styling advice: specific colors, materials, how to pair items, and any optional accessories for a complete look.",
+  };
+  const complexityLevel = typeof planningData?.complexity === "number"
+    ? Math.max(0, Math.min(3, Math.round(planningData.complexity)))
+    : 1;
+  const complexityInstruction = COMPLEXITY_INSTRUCTIONS[complexityLevel] ?? COMPLEXITY_INSTRUCTIONS[1];
+
   const userMessage = `Current weather conditions (averaged across sources):
 - Temperature: ${formatTemp(weather.temp, unitPreference)} (feels like ${formatTemp(weather.feelsLike, unitPreference)})
 - Humidity: ${weather.humidity}%
@@ -172,11 +235,13 @@ export async function getStyleRecommendation(
 - Conditions: ${weather.description}
 - Rain chance: ${weather.rainChance}%
 - UV Index: ${weather.uvIndex}
-- Time of day: ${weather.isDay ? "Daytime" : "Night-time"}${genderSection}${locationSection}${alertSection}${sourcesSection}${hourlySection}${customContextSection}${closetSection}
+- Time of day: ${weather.isDay ? "Daytime" : "Night-time"}${genderSection}${locationSection}${alertSection}${sourcesSection}${hourlySection}${customContextSection}${planningSection}${closetSection}
+
+${complexityInstruction}
 
 Please recommend an outfit.`;
 
-  const recommendation = await callAI(systemPrompt, userMessage, userApiKey, input.isDev);
+  const recommendation = await callAI(systemPrompt, userMessage, userApiKey, input.isDev, byokProvider);
   return closetWarning ? { ...recommendation, closetWarning } : recommendation;
 }
 
@@ -214,12 +279,53 @@ async function callAI(
   systemPrompt: string,
   userMessage: string,
   userApiKey?: string,
-  isDev: boolean = false
+  isDev: boolean = false,
+  byokProvider: "openai" | "gemini" = "openai"
 ): Promise<StyleRecommendation> {
   let raw: string;
   let modelUsed: string;
 
-  if (userApiKey || process.env.OPENAI_API_KEY) {
+  // Route BYOK key to the correct provider; server keys use the default priority order
+  const useGeminiBYOK = userApiKey && byokProvider === "gemini";
+
+  if (useGeminiBYOK) {
+    // BYOK with Gemini — use the user's own key
+    const GEMINI_MODELS = [
+      "gemini-2.5-flash-lite",
+      "gemini-2.5-flash",
+      "gemma-3-27b-it",
+      "gemma-3-12b-it",
+    ];
+    let geminiRaw: string | undefined;
+    let geminiModelUsed: string | undefined;
+    const triedModels: string[] = [];
+    for (const modelName of GEMINI_MODELS) {
+      triedModels.push(modelName);
+      try {
+        const model = getGemini(userApiKey).getGenerativeModel({
+          model: modelName,
+          generationConfig: { responseMimeType: "application/json", maxOutputTokens: 500 },
+        });
+        const result = await model.generateContent(`${systemPrompt}\n\n${userMessage}`);
+        geminiRaw = result.response.text();
+        geminiModelUsed = modelName;
+        break;
+      } catch (err) {
+        console.warn(
+          `[ai] Gemini BYOK model "${modelName}" failed:`,
+          err instanceof Error ? err.message : err
+        );
+      }
+    }
+    if (geminiRaw === undefined) {
+      throw new Error(`All Gemini BYOK models failed. Tried: ${triedModels.join(", ")}`);
+    }
+    if (!geminiModelUsed) {
+      throw new Error("Gemini BYOK model resolved without model metadata.");
+    }
+    raw = geminiRaw;
+    modelUsed = geminiModelUsed;
+  } else if (!useGeminiBYOK && (userApiKey || process.env.OPENAI_API_KEY)) {
     const modelName = "gpt-4o";
     const response = await getOpenAI(userApiKey).chat.completions.create({
       model: modelName,
