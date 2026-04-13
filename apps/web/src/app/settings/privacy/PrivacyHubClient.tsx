@@ -1,21 +1,74 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+
+const EXPORT_COOLDOWN_MS = 12 * 60 * 60 * 1000; // 12 hours
+const EXPORT_COOLDOWN_KEY = "skystyle_export_cooldown_until";
+
+/** Formats remaining milliseconds as "Xh Ym" or "Ym" */
+function formatCooldown(remainingMs: number): string {
+  const totalMinutes = Math.ceil(remainingMs / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
 
 interface PrivacyHubClientProps {
   isPendingDeletion: boolean;
+  isDev?: boolean;
   /** When true, suppresses the full-page shell (nav + min-h-screen wrapper) for embedding inside another page. */
   embedded?: boolean;
 }
 
-export default function PrivacyHubClient({ isPendingDeletion: initialPending, embedded = false }: PrivacyHubClientProps) {
+export default function PrivacyHubClient({ isPendingDeletion: initialPending, isDev = false, embedded = false }: PrivacyHubClientProps) {
   const [isPendingDeletion, setIsPendingDeletion] = useState(initialPending);
   const [deletionReason, setDeletionReason] = useState("");
   const [showDeleteForm, setShowDeleteForm] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Export cooldown: timestamp (ms) when cooldown expires, or null if not active
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  // Tick to force re-render of cooldown display every minute
+  const [, setTick] = useState(0);
+  // Hydration guard — avoid reading localStorage before client mount
+  const [mounted, setMounted] = useState(false);
+
+  // Load cooldown from localStorage on mount
+  useEffect(() => {
+    setMounted(true);
+    if (isDev) return; // dev users have no cooldown
+    try {
+      const stored = localStorage.getItem(EXPORT_COOLDOWN_KEY);
+      if (stored) {
+        const until = parseInt(stored, 10);
+        if (!isNaN(until) && until > Date.now()) {
+          setCooldownUntil(until);
+        } else {
+          // Expired — clean up
+          localStorage.removeItem(EXPORT_COOLDOWN_KEY);
+        }
+      }
+    } catch { /* ignore */ }
+  }, [isDev]);
+
+  // Refresh the displayed countdown every 60 s; clear interval when cooldown expires
+  useEffect(() => {
+    if (!cooldownUntil) return;
+    const id = setInterval(() => {
+      if (Date.now() >= cooldownUntil) {
+        setCooldownUntil(null);
+        try { localStorage.removeItem(EXPORT_COOLDOWN_KEY); } catch { /* ignore */ }
+      }
+      setTick((t) => t + 1);
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [cooldownUntil]);
+
+  const cooldownRemaining = cooldownUntil ? Math.max(0, cooldownUntil - Date.now()) : 0;
+  const isCoolingDown = mounted && !isDev && cooldownRemaining > 0;
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -37,6 +90,12 @@ export default function PrivacyHubClient({ isPendingDeletion: initialPending, em
       a.click();
       URL.revokeObjectURL(url);
       showToast("✅ Your data has been downloaded.");
+      // Start cooldown for non-dev users
+      if (!isDev) {
+        const until = Date.now() + EXPORT_COOLDOWN_MS;
+        setCooldownUntil(until);
+        try { localStorage.setItem(EXPORT_COOLDOWN_KEY, String(until)); } catch { /* ignore */ }
+      }
     } catch {
       showToast("❌ Export failed. Please try again.");
     } finally {
@@ -132,6 +191,16 @@ export default function PrivacyHubClient({ isPendingDeletion: initialPending, em
           >
             {downloading ? "Preparing…" : "⬇️ Download My Data (.json)"}
           </button>
+          {/* Cooldown notice — only shown after an export has been triggered */}
+          {isCoolingDown && (
+            <p
+              className="text-xs"
+              style={{ color: "var(--foreground)", opacity: 0.5 }}
+              aria-live="polite"
+            >
+              ⏳ Next export available in {formatCooldown(cooldownRemaining)}
+            </p>
+          )}
         </section>
 
         {/* Account Deletion */}

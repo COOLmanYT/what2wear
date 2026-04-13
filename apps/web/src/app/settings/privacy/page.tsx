@@ -14,15 +14,17 @@ export default async function PrivacyHubPage() {
   await syncPublicUser(session);
 
   let isPendingDeletion = false;
+  let isDev = false;
 
   try {
     const { data } = await supabaseAdmin
       .from("users")
-      .select("pending_deletion")
+      .select("pending_deletion, is_dev")
       .eq("id", session.user.id!)
       .single();
     isPendingDeletion = data?.pending_deletion ?? false;
+    isDev = data?.is_dev ?? false;
   } catch { /* Non-fatal */ }
 
-  return <PrivacyHubClient isPendingDeletion={isPendingDeletion} />;
+  return <PrivacyHubClient isPendingDeletion={isPendingDeletion} isDev={isDev} />;
 }

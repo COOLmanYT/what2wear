@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-04-13T02:24:34.000Z",
+    "version": "2.5.2",
+    "title": "Export cooldown system (SKY-1D)",
+    "description": "Add 12-hour localStorage-based cooldown after data export for regular users. Dev users bypass the cooldown. Countdown displayed in Privacy Hub."
+  },
+  {
     "date": "2026-04-13T02:14:50.000Z",
     "version": "2.5.1",
     "title": "Polish & performance pass (SKY-1C)",
