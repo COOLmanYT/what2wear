@@ -122,3 +122,5 @@ If you like my project and want to support the development:
 
 ☕ Buy me a coffee  
 https://buymeacoffee.com/coolmanyt
+
+:)
