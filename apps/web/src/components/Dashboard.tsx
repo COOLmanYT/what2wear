@@ -10,6 +10,7 @@ import { handleSignOut } from "@/app/actions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Checkbox from "@/components/Checkbox";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
 
 /** Returns true if version string `a` is strictly greater than `b`. */
 function isVersionGreater(a: string, b: string): boolean {
@@ -142,6 +143,7 @@ export default function Dashboard({
   const [devChatError, setDevChatError] = useState<string | null>(null);
   const [devChatResult, setDevChatResult] = useState<{ outfit: string; reasoning: string; rawOutput?: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [homeSubmenuOpen, setHomeSubmenuOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [changelogUnread, setChangelogUnread] = useState(false);
   // Two-stage fetch state: weather arrives first, AI recommendation second
@@ -156,6 +158,14 @@ export default function Dashboard({
   const [byokProvider, setByokProvider] = useState<"openai" | "gemini">("openai");
   const [clientCustomPrompt, setClientCustomPrompt] = useState("");
   const router = useRouter();
+
+  // Session diagnostics (dev-only, never persisted)
+  const [diagLastAiStatus, setDiagLastAiStatus] = useState<"success" | "error" | null>(null);
+  const [diagLastAiProvider, setDiagLastAiProvider] = useState<string | null>(null);
+  const [diagLastWeatherStatus, setDiagLastWeatherStatus] = useState<"success" | "error" | null>(null);
+  const [diagSessionErrors, setDiagSessionErrors] = useState(0);
+  const [diagLastFetchAt, setDiagLastFetchAt] = useState<string | null>(null);
+  const [diagFallbackEvents, _setDiagFallbackEvents] = useState<string[]>([]);
 
   // Returns the gradient/background CSS class for plan-based primary buttons
   const planBtnClass = isDev ? "btn-plan-dev" : isPro ? "btn-plan-pro" : "btn-plan-free";
@@ -419,6 +429,12 @@ export default function Dashboard({
 
   const creditsRemaining = result?.meta?.creditsRemaining ?? initialCredits;
 
+  /** True when the user has hit their daily follow-up limit (client-side guard). */
+  const isFollowUpLimitReached =
+    dailyLimits !== null &&
+    dailyLimits.followUps.limit !== null &&
+    dailyLimits.followUps.used >= dailyLimits.followUps.limit;
+
   /** Called by LocationPicker — only stores the selected location, no auto-fetch. */
   const handleLocationResolved = useCallback((loc: ResolvedLocation) => {
     setLocation(loc);
@@ -504,8 +520,21 @@ export default function Dashboard({
       if (weatherRes.ok) {
         const weather = await weatherRes.json();
         setWeatherData(weather);
+        if (isDev) {
+          setDiagLastWeatherStatus("success");
+          setDiagLastFetchAt(new Date().toISOString());
+        }
+      } else if (isDev) {
+        setDiagLastWeatherStatus("error");
+        setDiagSessionErrors((n) => n + 1);
       }
-    } catch { /* weather network error — style result may still save us */ }
+    } catch {
+      if (isDev) {
+        setDiagLastWeatherStatus("error");
+        setDiagSessionErrors((n) => n + 1);
+      }
+      /* weather network error — style result may still save us */
+    }
     setLoading(false);
 
     // Stage 2: AI recommendation (slower — reveal with animation)
@@ -515,13 +544,26 @@ export default function Dashboard({
         let errorMessage = "Something went wrong.";
         try { const data = await styleRes.json(); errorMessage = data.error ?? errorMessage; } catch { /* non-JSON */ }
         setError(errorMessage);
+        if (isDev) {
+          setDiagLastAiStatus("error");
+          setDiagSessionErrors((n) => n + 1);
+        }
       } else {
         const data = await styleRes.json() as StyleResponse;
         setResult(data);
         if (data.meta?.dailyLimits) setDailyLimits(data.meta.dailyLimits);
+        if (isDev) {
+          setDiagLastAiStatus("success");
+          const provider = data.recommendation?.modelUsed ?? data.meta?.modelUsed ?? null;
+          if (provider) setDiagLastAiProvider(provider);
+        }
       }
     } catch {
       setError("Network error — please try again.");
+      if (isDev) {
+        setDiagLastAiStatus("error");
+        setDiagSessionErrors((n) => n + 1);
+      }
     } finally {
       setAiLoading(false);
     }
@@ -530,6 +572,11 @@ export default function Dashboard({
   async function handleFollowUp(e: React.FormEvent) {
     e.preventDefault();
     if (!followUpText.trim() || !result) return;
+    // Client-side limit guard (server enforces definitively)
+    if (isFollowUpLimitReached) {
+      setFollowUpError(`Daily follow-up limit reached (${dailyLimits!.followUps.used}/${dailyLimits!.followUps.limit}).`);
+      return;
+    }
     setFollowUpLoading(true);
     setFollowUpError(null);
     try {
@@ -553,6 +600,10 @@ export default function Dashboard({
           /* non-JSON */
         }
         setFollowUpError(errorMessage);
+        if (isDev) {
+          setDiagLastAiStatus("error");
+          setDiagSessionErrors((n) => n + 1);
+        }
       } else {
         const data = await res.json();
         setResult((prev) =>
@@ -562,9 +613,14 @@ export default function Dashboard({
           setDailyLimits(data.meta.dailyLimits);
         }
         setFollowUpText("");
+        if (isDev) setDiagLastAiStatus("success");
       }
     } catch {
       setFollowUpError("Network error — please try again.");
+      if (isDev) {
+        setDiagLastAiStatus("error");
+        setDiagSessionErrors((n) => n + 1);
+      }
     } finally {
       setFollowUpLoading(false);
     }
@@ -786,8 +842,39 @@ export default function Dashboard({
               </button>
             </div>
             <nav className="space-y-1" aria-label="Menu navigation">
+              {/* 🏠 Home (expandable submenu) */}
+              <div>
+                <button
+                  onClick={() => setHomeSubmenuOpen((v) => !v)}
+                  className="w-full text-left rounded-xl px-3 py-2.5 text-sm btn-interact flex items-center justify-between"
+                  style={{ color: "#fff", background: "#007AFF" }}
+                >
+                  <span>🏠 Home</span>
+                  <span style={{ opacity: 0.8, fontSize: 11 }}>
+                    {homeSubmenuOpen ? "▲" : "▼"}
+                  </span>
+                </button>
+                {homeSubmenuOpen && (
+                  <div className="pl-4 mt-1 space-y-0.5">
+                    <button
+                      onClick={() => { setMenuOpen(false); setHomeSubmenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                      className="w-full text-left rounded-xl px-3 py-2 text-sm btn-interact"
+                      style={{ color: "var(--foreground)", opacity: 0.9 }}
+                    >
+                      Dashboard
+                    </button>
+                    <button
+                      onClick={() => { setMenuOpen(false); setHomeSubmenuOpen(false); router.push("/closet"); }}
+                      className="w-full text-left rounded-xl px-3 py-2 text-sm btn-interact"
+                      style={{ color: "var(--foreground)", opacity: 0.9 }}
+                    >
+                      👕 Closet
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {[
-                { label: "🏠 Home", action: () => { setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); }, active: true },
                 { label: "👤 Account", action: () => { setMenuOpen(false); router.push("/account"); }, active: false },
                 { label: "⚙️ Settings", action: () => { setMenuOpen(false); router.push("/settings"); }, active: false },
               ].map((item) => (
@@ -1321,12 +1408,12 @@ export default function Dashboard({
                     >
                       Outfit Recommendation
                     </h2>
-                    <p
-                      className="text-base leading-relaxed whitespace-pre-line"
+                    <MarkdownRenderer
+                      content={rec!.outfit}
+                      closetItems={closetItems}
+                      className="text-base leading-relaxed"
                       style={{ color: "var(--foreground)" }}
-                    >
-                      {renderOutfitWithClosetLinks(rec!.outfit)}
-                    </p>
+                    />
                     {rec!.reasoning && (
                       <>
                         <h3
@@ -1335,12 +1422,11 @@ export default function Dashboard({
                         >
                           Reasoning
                         </h3>
-                        <p
+                        <MarkdownRenderer
+                          content={rec!.reasoning}
                           className="text-sm leading-relaxed"
                           style={{ color: "var(--foreground)", opacity: 0.7 }}
-                        >
-                          {rec!.reasoning}
-                        </p>
+                        />
                         <div className="flex items-center gap-2 pt-1">
                           <span
                             className="text-xs"
@@ -1444,7 +1530,7 @@ export default function Dashboard({
                       />
                       <button
                         type="submit"
-                        disabled={followUpLoading || !followUpText.trim()}
+                        disabled={followUpLoading || !followUpText.trim() || isFollowUpLimitReached}
                         className={`rounded-xl px-4 py-2.5 text-sm font-medium btn-interact disabled:opacity-40 ${planBtnClass}`}
                       >
                         {followUpLoading ? "…" : "Ask"}
@@ -1539,6 +1625,67 @@ export default function Dashboard({
                         </pre>
                       </>
                     )}
+                  </div>
+                )}
+              </WeatherEffectCard>
+            )}
+
+            {isDev && (
+              <WeatherEffectCard
+                condition={w ? getWeatherCondition(w.description) : "default"}
+                windSpeed={w?.windSpeed ?? 0}
+                className="rounded-2xl p-5 space-y-3"
+                style={{
+                  background: "var(--card)",
+                  border: "1px solid #bf5af2",
+                }}
+              >
+                <h2
+                  className="text-xs font-semibold uppercase tracking-widest"
+                  style={{ color: "#bf5af2" }}
+                >
+                  🔬 Session Diagnostics
+                </h2>
+                <div className="grid grid-cols-2 gap-2 text-xs" style={{ color: "var(--foreground)" }}>
+                  <div className="rounded-xl p-2" style={{ background: "var(--background)", border: "1px solid var(--card-border)" }}>
+                    <span style={{ opacity: 0.5 }}>Last AI</span>
+                    <p className="font-semibold mt-0.5" style={{ color: diagLastAiStatus === "success" ? "#30d158" : diagLastAiStatus === "error" ? "#ff3b30" : "var(--foreground)", opacity: diagLastAiStatus ? 1 : 0.4 }}>
+                      {diagLastAiStatus ?? "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl p-2" style={{ background: "var(--background)", border: "1px solid var(--card-border)" }}>
+                    <span style={{ opacity: 0.5 }}>AI Provider</span>
+                    <p className="font-semibold mt-0.5" style={{ opacity: diagLastAiProvider ? 1 : 0.4 }}>
+                      {diagLastAiProvider ?? "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl p-2" style={{ background: "var(--background)", border: "1px solid var(--card-border)" }}>
+                    <span style={{ opacity: 0.5 }}>Last Weather</span>
+                    <p className="font-semibold mt-0.5" style={{ color: diagLastWeatherStatus === "success" ? "#30d158" : diagLastWeatherStatus === "error" ? "#ff3b30" : "var(--foreground)", opacity: diagLastWeatherStatus ? 1 : 0.4 }}>
+                      {diagLastWeatherStatus ?? "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl p-2" style={{ background: "var(--background)", border: "1px solid var(--card-border)" }}>
+                    <span style={{ opacity: 0.5 }}>Session Errors</span>
+                    <p className="font-semibold mt-0.5" style={{ color: diagSessionErrors > 0 ? "#ff9500" : "#30d158" }}>
+                      {diagSessionErrors}
+                    </p>
+                  </div>
+                  <div className="col-span-2 rounded-xl p-2" style={{ background: "var(--background)", border: "1px solid var(--card-border)" }}>
+                    <span style={{ opacity: 0.5 }}>Last Fetch</span>
+                    <p className="font-semibold mt-0.5" style={{ opacity: diagLastFetchAt ? 1 : 0.4, fontFamily: "monospace" }}>
+                      {diagLastFetchAt ? new Date(diagLastFetchAt).toLocaleTimeString() : "—"}
+                    </p>
+                  </div>
+                </div>
+                {diagFallbackEvents.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: "#ff9500", opacity: 0.7 }}>Fallback Events</p>
+                    <ul className="space-y-1">
+                      {diagFallbackEvents.map((ev, i) => (
+                        <li key={i} className="text-xs rounded-xl px-2 py-1" style={{ background: "var(--background)", color: "#ff9500", border: "1px solid var(--card-border)" }}>{ev}</li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </WeatherEffectCard>
@@ -1783,6 +1930,17 @@ export default function Dashboard({
                 label="Force recommendation to use closet"
                 description={closetItems.length === 0 ? "Add items to your closet for more accurate recommendations" : undefined}
               />
+              <Link
+                href="/closet"
+                className="block w-full text-center rounded-xl py-2 text-xs btn-interact"
+                style={{
+                  color: "var(--foreground)",
+                  opacity: 0.55,
+                  border: "1px solid var(--card-border)",
+                }}
+              >
+                See full closet →
+              </Link>
             </div>
 
             {/* ── Weather Sources ── */}

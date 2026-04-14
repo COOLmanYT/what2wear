@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Toggle from "@/components/Toggle";
 import Checkbox from "@/components/Checkbox";
+import HamburgerNav from "@/components/HamburgerNav";
 
 const MAX_GENDER_LENGTH = 30;
 
@@ -133,40 +134,19 @@ export default function SettingsClient({ initialUnitPreference }: SettingsClient
 
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
-      {/* Navigation */}
-      <nav
-        className="sticky-nav px-4 py-3"
-        aria-label="Settings navigation"
-        style={{ borderBottom: "1px solid var(--card-border)" }}
-      >
-        <div className="flex items-center justify-between max-w-2xl mx-auto">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => window.history.length > 1 ? window.history.back() : window.location.assign("/dashboard")}
-              className="text-sm btn-interact rounded-xl px-3 py-2"
-              style={{ color: "var(--foreground)", opacity: 0.6 }}
-              aria-label="Go back"
-            >
-              ←
-            </button>
-            <span className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>
-              <span aria-hidden="true">⚙️ </span>Settings
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link href="/account" className="text-xs btn-interact rounded-xl px-3 py-2 hidden sm:block" style={{ color: "var(--foreground)", opacity: 0.5 }}>Account</Link>
-            <Link href="/settings/security" className="text-xs btn-interact rounded-xl px-3 py-2 hidden sm:block" style={{ color: "var(--foreground)", opacity: 0.5 }}>Security</Link>
-            <Link href="/settings/privacy" className="text-xs btn-interact rounded-xl px-3 py-2 hidden sm:block" style={{ color: "var(--foreground)", opacity: 0.5 }}>Privacy</Link>
-            <button
-              onClick={handleSave}
-              className="rounded-xl px-4 py-2 text-sm font-medium btn-interact"
-              style={{ background: "var(--accent)", color: "#fff" }}
-            >
-              Save
-            </button>
-          </div>
-        </div>
-      </nav>
+      <HamburgerNav
+        currentPage="settings"
+        title="⚙️ Settings"
+        rightContent={
+          <button
+            onClick={handleSave}
+            className="rounded-xl px-4 py-2 text-sm font-medium btn-interact"
+            style={{ background: "var(--accent)", color: "#fff" }}
+          >
+            Save
+          </button>
+        }
+      />
 
       {/* Content */}
       <main id="main-content">

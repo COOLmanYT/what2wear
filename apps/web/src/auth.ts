@@ -5,6 +5,14 @@ import Credentials from "next-auth/providers/credentials";
 import { SupabaseAdapter } from "@auth/supabase-adapter";
 import type { Adapter } from "next-auth/adapters";
 
+// On Vercel preview deployments, AUTH_URL is typically set to the production
+// domain. Override it with the deployment-specific VERCEL_URL so that NextAuth
+// resolves post-sign-in redirects against the preview domain instead of
+// bouncing users to the production dashboard.
+if (process.env.VERCEL_ENV === "preview" && process.env.VERCEL_URL) {
+  process.env.AUTH_URL = `https://${process.env.VERCEL_URL}`;
+}
+
 /** Stable ID used for the demo/preview user. */
 export const DEMO_USER_ID = "demo-user-123";
 

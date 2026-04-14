@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import HamburgerNav from "@/components/HamburgerNav";
 
 const EXPORT_COOLDOWN_MS = 12 * 60 * 60 * 1000; // 12 hours
 const EXPORT_COOLDOWN_KEY = "skystyle_export_cooldown_until";
@@ -303,29 +304,16 @@ export default function PrivacyHubClient({ isPendingDeletion: initialPending, is
 
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
-      <nav
-        className="sticky-nav px-4 py-3"
-        style={{ borderBottom: "1px solid var(--card-border)" }}
-      >
-        <div className="flex items-center justify-between max-w-3xl mx-auto">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => window.history.length > 1 ? window.history.back() : window.location.assign("/dashboard")}
-              className="text-sm btn-interact rounded-xl px-3 py-2"
-              style={{ color: "var(--foreground)", opacity: 0.6 }}
-            >
-              ←
-            </button>
-            <span className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>
-              🔐 Privacy Hub
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
+      <HamburgerNav
+        currentPage="settings"
+        title="🔐 Privacy Hub"
+        rightContent={
+          <>
             <Link href="/settings" className="text-xs btn-interact rounded-xl px-3 py-2" style={{ color: "var(--foreground)", opacity: 0.5 }}>Settings</Link>
             <Link href="/settings/security" className="text-xs btn-interact rounded-xl px-3 py-2" style={{ color: "var(--foreground)", opacity: 0.5 }}>Security</Link>
-          </div>
-        </div>
-      </nav>
+          </>
+        }
+      />
 
       <main id="main-content">
         {content}
