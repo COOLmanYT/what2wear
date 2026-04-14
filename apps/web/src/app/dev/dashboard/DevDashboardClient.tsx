@@ -349,66 +349,181 @@ export default function DevDashboardClient({ initialSection = "triage" }: { init
   );
 }
 
-function ChangelogCMS() {
-  const [version, setVersion] = useState("");
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+interface ChangelogEntry {
+  date: string;
+  version: string;
+  title: string;
+  description: string;
+  large?: boolean;
+  showOnNextLogin?: boolean;
+  ctaLabel?: string;
+  ctaLink?: string;
+  imageUrl?: string;
+}
 
-  async function publish() {
-    if (!version.trim() || !title.trim()) return;
+const EMPTY_ENTRY: Omit<ChangelogEntry, "date"> = {
+  version: "",
+  title: "",
+  description: "",
+  large: false,
+  showOnNextLogin: false,
+  ctaLabel: "",
+  ctaLink: "",
+  imageUrl: "",
+};
+
+function ChangelogCMS() {
+  const [entries, setEntries] = useState<ChangelogEntry[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({ ...EMPTY_ENTRY });
+  const [editingVersion, setEditingVersion] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [preview, setPreview] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/dev/changelog")
+      .then((r) => r.json())
+      .then((d) => { setEntries(Array.isArray(d) ? d : []); setLoading(false); })
+      .catch((e) => { setLoadError(String(e)); setLoading(false); });
+  }, []);
+
+  function startNew() {
+    setForm({ ...EMPTY_ENTRY });
+    setEditingVersion(null);
+    setSaveError(null);
+    setPreview(false);
+  }
+
+  function startEdit(e: ChangelogEntry) {
+    setForm({
+      version: e.version,
+      title: e.title,
+      description: e.description,
+      large: e.large ?? false,
+      showOnNextLogin: e.showOnNextLogin ?? false,
+      ctaLabel: e.ctaLabel ?? "",
+      ctaLink: e.ctaLink ?? "",
+      imageUrl: e.imageUrl ?? "",
+    });
+    setEditingVersion(e.version);
+    setSaveError(null);
+    setPreview(false);
+  }
+
+  async function handleSave() {
+    if (!form.version.trim() || !form.title.trim()) { setSaveError("Version and title are required."); return; }
     setSaving(true);
-    // Write directly to changelog.json via a dev API (future: DB-driven)
-    // For now, show instructions
-    setSaved(true);
+    setSaveError(null);
+    const entry: ChangelogEntry = {
+      date: editingVersion ? (entries.find(e => e.version === editingVersion)?.date ?? new Date().toISOString()) : new Date().toISOString(),
+      ...form,
+    };
+    const method = editingVersion ? "PUT" : "POST";
+    const res = await fetch("/api/dev/changelog", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry) });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setSaveError((body as { error?: string }).error ?? "Failed to save.");
+      setSaving(false);
+      return;
+    }
+    const updated = await fetch("/api/dev/changelog").then(r => r.json());
+    setEntries(Array.isArray(updated) ? updated : entries);
+    startNew();
     setSaving(false);
   }
 
+  async function handleDelete(version: string) {
+    if (!window.confirm(`Delete entry v${version}? This cannot be undone.`)) return;
+    try {
+      const res = await fetch("/api/dev/changelog", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ version }) });
+      if (!res.ok) { alert("Failed to delete entry."); return; }
+      setEntries((prev) => prev.filter(e => e.version !== version));
+      if (editingVersion === version) startNew();
+    } catch {
+      alert("Failed to delete entry.");
+    }
+  }
+
+  const inputStyle: React.CSSProperties = { background: "var(--background)", color: "var(--foreground)", border: "1px solid var(--card-border)", outline: "none", borderRadius: 12, padding: "8px 14px", fontSize: 14, width: "100%" };
+  const cardStyle: React.CSSProperties = { background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 16, padding: 20 };
+
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>
-        Changelog CMS
-      </h2>
-      <div
-        className="rounded-2xl p-5 space-y-3"
-        style={{ background: "var(--card)", border: "1px solid var(--card-border)" }}
-      >
-        <input
-          value={version}
-          onChange={(e) => setVersion(e.target.value)}
-          placeholder="Version (e.g. 2.1.0)"
-          className="w-full text-sm rounded-xl px-4 py-2"
-          style={{ background: "var(--background)", color: "var(--foreground)", border: "1px solid var(--card-border)", outline: "none" }}
-        />
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Title"
-          className="w-full text-sm rounded-xl px-4 py-2"
-          style={{ background: "var(--background)", color: "var(--foreground)", border: "1px solid var(--card-border)", outline: "none" }}
-        />
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="Body (Markdown supported)..."
-          rows={6}
-          className="w-full text-sm rounded-xl px-4 py-2 resize-none"
-          style={{ background: "var(--background)", color: "var(--foreground)", border: "1px solid var(--card-border)", outline: "none" }}
-        />
-        <button
-          onClick={publish}
-          disabled={saving}
-          className="rounded-xl px-5 py-2 text-sm font-semibold btn-interact"
-          style={{ background: "var(--accent)", color: "#fff" }}
-        >
-          {saving ? "Publishing…" : "Publish Entry"}
-        </button>
-        {saved && (
-          <p className="text-xs" style={{ color: "#30d158" }}>
-            ✅ Entry staged. Update changelog.json to finalize.
-          </p>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>📝 Changelog CMS</h2>
+        <button onClick={startNew} className="rounded-xl px-4 py-2 text-sm font-medium btn-interact" style={{ background: "var(--accent)", color: "#fff" }}>+ New Entry</button>
+      </div>
+
+      {/* Form */}
+      <div style={cardStyle} className="space-y-3">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>{editingVersion ? `Editing v${editingVersion}` : "Create New Entry"}</span>
+          <div className="flex gap-2">
+            <button onClick={() => setPreview(false)} className="text-xs rounded-lg px-3 py-1 btn-interact" style={{ background: preview ? "transparent" : "var(--accent)", color: preview ? "var(--foreground)" : "#fff" }}>Edit</button>
+            <button onClick={() => setPreview(true)} className="text-xs rounded-lg px-3 py-1 btn-interact" style={{ background: preview ? "var(--accent)" : "transparent", color: preview ? "#fff" : "var(--foreground)" }}>Preview</button>
+          </div>
+        </div>
+        {preview ? (
+          <div className="space-y-2">
+            <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>{form.title || "(no title)"} <span style={{ opacity: 0.5 }}>v{form.version}</span></p>
+            <pre className="text-sm whitespace-pre-wrap" style={{ color: "var(--foreground)", opacity: 0.8, fontFamily: "inherit" }}>{form.description || "(no description)"}</pre>
+            {form.ctaLabel && form.ctaLink && <a href={form.ctaLink} target="_blank" rel="noopener noreferrer" className="text-xs px-3 py-1.5 rounded-lg inline-block" style={{ background: "var(--accent)", color: "#fff" }}>{form.ctaLabel}</a>}
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            <div className="flex gap-2">
+              <input value={form.version} onChange={e => setForm(f => ({ ...f, version: e.target.value }))} placeholder="Version (e.g. 2.7.0)" style={{ ...inputStyle, flex: "0 0 40%" }} />
+              <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Title" style={{ ...inputStyle, flex: 1 }} />
+            </div>
+            <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description (Markdown supported)" rows={5} style={{ ...inputStyle, resize: "vertical" }} />
+            <input value={form.imageUrl} onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))} placeholder="Image URL (optional)" style={inputStyle} />
+            <div className="flex gap-2">
+              <input value={form.ctaLabel} onChange={e => setForm(f => ({ ...f, ctaLabel: e.target.value }))} placeholder="CTA Label (optional)" style={{ ...inputStyle, flex: 1 }} />
+              <input value={form.ctaLink} onChange={e => setForm(f => ({ ...f, ctaLink: e.target.value }))} placeholder="CTA Link (optional)" style={{ ...inputStyle, flex: 1 }} />
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={!!form.large} onChange={e => setForm(f => ({ ...f, large: e.target.checked }))} />
+                <span className="text-xs" style={{ color: "var(--foreground)" }}>Large changelog</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={!!form.showOnNextLogin} onChange={e => setForm(f => ({ ...f, showOnNextLogin: e.target.checked }))} />
+                <span className="text-xs" style={{ color: "var(--foreground)" }}>Show on next login</span>
+              </label>
+            </div>
+            {saveError && <p className="text-xs" style={{ color: "#ff3b30" }}>{saveError}</p>}
+            <div className="flex gap-2">
+              <button onClick={handleSave} disabled={saving} className="rounded-xl px-5 py-2 text-sm font-semibold btn-interact" style={{ background: "var(--accent)", color: "#fff" }}>{saving ? "Saving…" : editingVersion ? "Update Entry" : "Create Entry"}</button>
+              {editingVersion && <button onClick={startNew} className="rounded-xl px-4 py-2 text-sm btn-interact" style={{ color: "var(--foreground)", border: "1px solid var(--card-border)" }}>Cancel</button>}
+            </div>
+          </div>
         )}
+      </div>
+
+      {/* List */}
+      <div style={cardStyle} className="space-y-2">
+        <p className="text-xs font-semibold mb-2" style={{ color: "var(--foreground)", opacity: 0.5 }}>EXISTING ENTRIES ({entries.length})</p>
+        {loading && <p className="text-sm" style={{ color: "var(--foreground)", opacity: 0.5 }}>Loading…</p>}
+        {loadError && <p className="text-xs" style={{ color: "#ff3b30" }}>Failed to load: {loadError}</p>}
+        {!loading && entries.map((e) => (
+          <div key={e.version} className="flex items-start justify-between gap-2 rounded-xl px-3 py-2.5" style={{ background: "var(--background)", border: "1px solid var(--card-border)" }}>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+                v{e.version} · {e.title}
+                {e.large && <span className="ml-1 text-xs px-1.5 py-0.5 rounded" style={{ background: "var(--accent)", color: "#fff" }}>large</span>}
+                {e.showOnNextLogin && <span className="ml-1 text-xs px-1.5 py-0.5 rounded" style={{ background: "#ff9500", color: "#fff" }}>login popup</span>}
+              </p>
+              <p className="text-xs truncate" style={{ color: "var(--foreground)", opacity: 0.5 }}>{e.date.slice(0, 10)} — {e.description.slice(0, 80)}{e.description.length > 80 ? "…" : ""}</p>
+            </div>
+            <div className="flex gap-1 shrink-0">
+              <button onClick={() => startEdit(e)} className="text-xs rounded-lg px-2.5 py-1 btn-interact" style={{ color: "var(--foreground)", border: "1px solid var(--card-border)" }}>Edit</button>
+              <button onClick={() => handleDelete(e.version)} className="text-xs rounded-lg px-2.5 py-1 btn-interact" style={{ color: "#ff3b30", border: "1px solid var(--card-border)" }}>Delete</button>
+            </div>
+          </div>
+        ))}
+        {!loading && !entries.length && <p className="text-sm" style={{ color: "var(--foreground)", opacity: 0.4 }}>No entries yet.</p>}
       </div>
     </div>
   );

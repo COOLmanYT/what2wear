@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Toggle from "@/components/Toggle";
+import HamburgerNav from "@/components/HamburgerNav";
 
 interface SecurityLog {
   id: string;
@@ -468,29 +469,16 @@ export default function SecurityClient({ mfaEnabled: initialMfaEnabled, embedded
 
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
-      <nav
-        className="sticky-nav px-4 py-3"
-        style={{ borderBottom: "1px solid var(--card-border)" }}
-      >
-        <div className="flex items-center justify-between max-w-3xl mx-auto">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => window.history.length > 1 ? window.history.back() : window.location.assign("/dashboard")}
-              className="text-sm btn-interact rounded-xl px-3 py-2"
-              style={{ color: "var(--foreground)", opacity: 0.6 }}
-            >
-              ←
-            </button>
-            <span className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>
-              🛡️ Security
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
+      <HamburgerNav
+        currentPage="settings"
+        title="🛡️ Security"
+        rightContent={
+          <>
             <Link href="/settings" className="text-xs btn-interact rounded-xl px-3 py-2" style={{ color: "var(--foreground)", opacity: 0.5 }}>Settings</Link>
             <Link href="/account" className="text-xs btn-interact rounded-xl px-3 py-2" style={{ color: "var(--foreground)", opacity: 0.5 }}>Account</Link>
-          </div>
-        </div>
-      </nav>
+          </>
+        }
+      />
 
       <main id="main-content">
         {content}

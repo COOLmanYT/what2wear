@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-04-14T09:34:38.000Z",
+    "version": "2.7.0",
+    "title": "Hamburger nav on all pages, Changelog CMS",
+    "description": "Shared HamburgerNav replaces all back buttons on Settings, Security, and Privacy Hub. Dev changelog CMS supports create/edit/delete via API."
+  },
+  {
     "date": "2026-04-14T04:05:39.000Z",
     "version": "2.6.3",
     "title": "Fix preview auth redirect via AUTH_URL override",
