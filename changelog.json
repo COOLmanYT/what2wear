@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-04-14T04:05:39.000Z",
+    "version": "2.6.3",
+    "title": "Fix preview auth redirect via AUTH_URL override",
+    "description": "auth.ts now overrides AUTH_URL with VERCEL_URL on preview deployments so NextAuth resolves redirectTo against the preview domain, not production."
+  },
+  {
     "date": "2026-04-14T03:13:08.000Z",
     "version": "2.6.2",
     "title": "Fix preview deployments redirecting to production dashboard",
