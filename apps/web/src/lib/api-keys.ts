@@ -5,6 +5,12 @@ const API_KEY_BYTES = 32;
 const SCRYPT_KEYLEN = 64;
 const HASH_SALT_BYTES = 16;
 const PREVIEW_CHARS = 4;
+const SCRYPT_OPTIONS = {
+  N: 16384,
+  r: 8,
+  p: 1,
+  maxmem: 32 * 1024 * 1024,
+} as const;
 
 export function generateApiKey(): { key: string; preview: string } {
   const token = randomBytes(API_KEY_BYTES).toString("base64url");
@@ -14,13 +20,14 @@ export function generateApiKey(): { key: string; preview: string } {
 
 export function hashApiKey(apiKey: string): string {
   const salt = randomBytes(HASH_SALT_BYTES).toString("hex");
-  const hash = scryptSync(apiKey, salt, SCRYPT_KEYLEN).toString("hex");
+  const hash = scryptSync(apiKey, salt, SCRYPT_KEYLEN, SCRYPT_OPTIONS).toString("hex");
   return `${salt}:${hash}`;
 }
 
 export function verifyApiKey(apiKey: string, storedHash: string): boolean {
-  const [salt, expectedHash] = storedHash.split(":");
-  if (!salt || !expectedHash) return false;
-  const computedHash = scryptSync(apiKey, salt, SCRYPT_KEYLEN).toString("hex");
+  const match = /^([a-f0-9]{32}):([a-f0-9]{128})$/i.exec(storedHash);
+  if (!match) return false;
+  const [, salt, expectedHash] = match;
+  const computedHash = scryptSync(apiKey, salt, SCRYPT_KEYLEN, SCRYPT_OPTIONS).toString("hex");
   return timingSafeEqual(Buffer.from(computedHash, "hex"), Buffer.from(expectedHash, "hex"));
 }

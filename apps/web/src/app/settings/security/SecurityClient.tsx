@@ -487,8 +487,12 @@ export default function SecurityClient({ mfaEnabled: initialMfaEnabled, embedded
               <div className="flex gap-2">
                 <button
                   onClick={async () => {
-                    await navigator.clipboard.writeText(newApiKey);
-                    showToast("API key copied.");
+                    try {
+                      await navigator.clipboard.writeText(newApiKey);
+                      showToast("API key copied.");
+                    } catch {
+                      setError("Could not copy key automatically. Please copy it manually.");
+                    }
                   }}
                   className="text-xs btn-interact rounded-xl px-3 py-2"
                   style={{ background: "var(--foreground)", color: "var(--background)" }}
