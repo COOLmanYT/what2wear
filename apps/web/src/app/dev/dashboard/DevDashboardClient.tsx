@@ -580,7 +580,7 @@ function ChangelogCMS() {
                       </a>
                     ) : (
                       <span className="inline-block rounded-xl px-4 py-2 text-xs font-medium" style={{ background: "var(--accent)", color: "#fff", opacity: 0.6 }}>
-                        {form.ctaLabel} <span style={{ fontSize: 10 }}>(invalid URL)</span>
+                        {form.ctaLabel} <span style={{ fontSize: "10px" }}>(invalid URL)</span>
                       </span>
                     )}
                   </div>
