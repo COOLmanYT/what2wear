@@ -20,12 +20,21 @@ interface Passkey {
   created_at: string;
 }
 
+interface ApiKey {
+  id: string;
+  key_preview: string;
+  created_at: string;
+  revoked: boolean;
+}
+
 const EVENT_LABELS: Record<string, string> = {
   login: "🔑 New sign-in",
   logout: "👋 Signed out",
   password_changed: "🔒 Password changed",
   passkey_added: "🪪 Passkey added",
   passkey_removed: "🗑️ Passkey removed",
+  api_key_created: "🧩 API key created",
+  api_key_revoked: "🚫 API key revoked",
   mfa_enabled: "🛡️ 2FA enabled",
   mfa_disabled: "⚠️ 2FA disabled",
   recovery_codes_generated: "🔄 Recovery codes regenerated",
@@ -52,10 +61,13 @@ export default function SecurityClient({ mfaEnabled: initialMfaEnabled, embedded
   const [disableToken, setDisableToken] = useState("");
   const [showDisable, setShowDisable] = useState(false);
   const [passkeys, setPasskeys] = useState<Passkey[]>([]);
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [securityLogs, setSecurityLogs] = useState<SecurityLog[]>([]);
   const [loadingMfa, setLoadingMfa] = useState(false);
+  const [loadingApiKeys, setLoadingApiKeys] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [newApiKey, setNewApiKey] = useState<string | null>(null);
   const [regenToken, setRegenToken] = useState("");
   const [showRegen, setShowRegen] = useState(false);
 
@@ -74,9 +86,14 @@ export default function SecurityClient({ mfaEnabled: initialMfaEnabled, embedded
     if (res.ok) setSecurityLogs(await res.json());
   }, []);
 
+  const fetchApiKeys = useCallback(async () => {
+    const res = await fetch("/api/api-keys");
+    if (res.ok) setApiKeys(await res.json());
+  }, []);
+
   useEffect(() => {
-    void (async () => { await Promise.all([fetchPasskeys(), fetchLogs()]); })();
-  }, [fetchPasskeys, fetchLogs]);
+    void (async () => { await Promise.all([fetchPasskeys(), fetchLogs(), fetchApiKeys()]); })();
+  }, [fetchPasskeys, fetchLogs, fetchApiKeys]);
 
   async function startMfaSetup() {
     setLoadingMfa(true);
@@ -153,6 +170,32 @@ export default function SecurityClient({ mfaEnabled: initialMfaEnabled, embedded
       body: JSON.stringify({ id }),
     });
     if (res.ok) { showToast("Passkey removed."); fetchPasskeys(); fetchLogs(); }
+  }
+
+  async function createApiKey() {
+    setLoadingApiKeys(true);
+    setError(null);
+    const res = await fetch("/api/api-keys", { method: "POST" });
+    setLoadingApiKeys(false);
+    if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.error ?? "Failed to create API key."); return; }
+    const data = await res.json();
+    setNewApiKey(typeof data.apiKey === "string" ? data.apiKey : null);
+    await Promise.all([fetchApiKeys(), fetchLogs()]);
+    showToast("API key created.");
+  }
+
+  async function revokeApiKey(id: string) {
+    setLoadingApiKeys(true);
+    setError(null);
+    const res = await fetch("/api/api-keys", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    setLoadingApiKeys(false);
+    if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.error ?? "Failed to revoke API key."); return; }
+    await Promise.all([fetchApiKeys(), fetchLogs()]);
+    showToast("API key revoked.");
   }
 
   async function downloadCodes() {
@@ -400,6 +443,98 @@ export default function SecurityClient({ mfaEnabled: initialMfaEnabled, embedded
                   >
                     Remove
                   </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ── API Keys ── */}
+        <section
+          className="rounded-2xl p-6 space-y-4"
+          style={{ background: "var(--card)", border: "1px solid var(--card-border)" }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--foreground)", opacity: 0.4 }}>
+                API Keys
+              </p>
+              <p className="text-xs mt-1" style={{ color: "var(--foreground)", opacity: 0.55 }}>
+                Create and revoke keys for upcoming Sky Style API access. Keys are shown only once.
+              </p>
+            </div>
+            <button
+              onClick={createApiKey}
+              disabled={loadingApiKeys}
+              className="rounded-xl px-4 py-2 text-xs font-semibold btn-interact"
+              style={{ background: "var(--accent)", color: "#fff", opacity: loadingApiKeys ? 0.7 : 1 }}
+            >
+              {loadingApiKeys ? "Creating…" : "Generate key"}
+            </button>
+          </div>
+
+          {newApiKey && (
+            <div className="rounded-xl p-4 space-y-2" style={{ background: "var(--background)" }}>
+              <p className="text-xs font-semibold" style={{ color: "#ff9500" }}>
+                ⚠️ Copy this key now. You won&apos;t be able to see it again.
+              </p>
+              <code
+                className="block text-xs break-all rounded-lg px-3 py-2"
+                style={{ background: "var(--card)", color: "var(--foreground)", border: "1px solid var(--card-border)" }}
+              >
+                {newApiKey}
+              </code>
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(newApiKey);
+                    showToast("API key copied.");
+                  }}
+                  className="text-xs btn-interact rounded-xl px-3 py-2"
+                  style={{ background: "var(--foreground)", color: "var(--background)" }}
+                >
+                  Copy key
+                </button>
+                <button
+                  onClick={() => setNewApiKey(null)}
+                  className="text-xs btn-interact rounded-xl px-3 py-2"
+                  style={{ background: "var(--background)", color: "var(--foreground)", border: "1px solid var(--card-border)" }}
+                >
+                  Hide
+                </button>
+              </div>
+            </div>
+          )}
+
+          {apiKeys.length === 0 ? (
+            <p className="text-xs" style={{ color: "var(--foreground)", opacity: 0.4 }}>
+              No API keys created yet.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {apiKeys.map((key) => (
+                <div
+                  key={key.id}
+                  className="flex items-center justify-between p-3 rounded-xl"
+                  style={{ background: "var(--background)" }}
+                >
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+                      {key.key_preview}
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--foreground)", opacity: 0.45 }}>
+                      Created {new Date(key.created_at).toLocaleString()} {key.revoked ? "· Revoked" : "· Active"}
+                    </p>
+                  </div>
+                  {!key.revoked && (
+                    <button
+                      onClick={() => revokeApiKey(key.id)}
+                      className="text-xs btn-interact px-3 py-1.5 rounded-xl"
+                      style={{ background: "rgba(255,59,48,0.1)", color: "#ff3b30" }}
+                    >
+                      Revoke
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

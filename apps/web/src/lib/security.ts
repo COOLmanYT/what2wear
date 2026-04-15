@@ -122,6 +122,8 @@ export type SecurityEventType =
   | "password_changed"
   | "passkey_added"
   | "passkey_removed"
+  | "api_key_created"
+  | "api_key_revoked"
   | "mfa_enabled"
   | "mfa_disabled"
   | "recovery_codes_generated"

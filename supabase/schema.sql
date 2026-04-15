@@ -294,7 +294,23 @@ CREATE POLICY "Users can read own dev_messages"
   ON dev_messages FOR SELECT USING ((select auth.uid()) = user_id);
 
 -- ------------------------------------------------------------
--- 14. Changelog Posts (CMS — DB-driven, Markdown/Image)
+-- 14. API Keys (hashed, revocable)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS api_keys (
+  id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  key_hash    text        NOT NULL,
+  key_preview text        NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  revoked     boolean     NOT NULL DEFAULT false
+);
+
+ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can read own api_keys"
+  ON api_keys FOR SELECT USING ((select auth.uid()) = user_id);
+
+-- ------------------------------------------------------------
+-- 15. Changelog Posts (CMS — DB-driven, Markdown/Image)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS changelog_posts (
   id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
