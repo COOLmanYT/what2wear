@@ -58,8 +58,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to create API key" }, { status: 500 });
   }
 
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  await logSecurityEvent(session.user.id, "api_key_created", { key_id: data.id }, ip);
+  await logSecurityEvent(session.user.id, "api_key_created", { key_id: data.id });
 
   return NextResponse.json({ apiKey: key, keyMeta: data }, { status: 201 });
 }
@@ -91,8 +90,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "API key not found" }, { status: 404 });
   }
 
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  await logSecurityEvent(session.user.id, "api_key_revoked", { key_id: id }, ip);
+  await logSecurityEvent(session.user.id, "api_key_revoked", { key_id: id });
 
   return NextResponse.json({ success: true });
 }

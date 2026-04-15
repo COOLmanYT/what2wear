@@ -25,7 +25,7 @@ export function hashApiKey(apiKey: string): string {
 }
 
 export function verifyApiKey(apiKey: string, storedHash: string): boolean {
-  const match = /^([a-f0-9]{32}):([a-f0-9]{128})$/i.exec(storedHash);
+  const match = /^([a-f0-9]{32}):([a-f0-9]{128})$/.exec(storedHash);
   if (!match) return false;
   const [, salt, expectedHash] = match;
   const computedHash = scryptSync(apiKey, salt, SCRYPT_KEYLEN, SCRYPT_OPTIONS).toString("hex");
