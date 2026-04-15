@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { submitFeedback } from "@/app/actions";
 
 const CATEGORIES = [
@@ -42,7 +42,7 @@ export default function FeedbackForm({
   onSuccess,
   onCancel,
 }: FeedbackFormProps) {
-  const simpleMode = getLocalStorage("skystyle_simple_mode", "true") === "true";
+  const simpleMode = useMemo(() => getLocalStorage("skystyle_simple_mode", "true") === "true", []);
   const [category, setCategory] = useState(initialCategory ?? "Other");
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");

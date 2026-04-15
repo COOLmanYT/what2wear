@@ -75,7 +75,7 @@ export default function SecurityClient({ mfaEnabled: initialMfaEnabled, embedded
   }, []);
 
   useEffect(() => {
-    void (async () => { fetchPasskeys(); fetchLogs(); })();
+    void (async () => { await Promise.all([fetchPasskeys(), fetchLogs()]); })();
   }, [fetchPasskeys, fetchLogs]);
 
   async function startMfaSetup() {
