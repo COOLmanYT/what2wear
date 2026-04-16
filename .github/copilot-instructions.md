@@ -1,5 +1,9 @@
 # GitHub Copilot Instructions — Sky Style (what2wear)
 
+# Current version: 2.9.3
+
+This is for the changelog version number. Update this version number accordingly to the Semver Guide below, then use it in your end-of-task SQL statement. (Make sure to update the version number in `AGENTS.md` as well.) 
+
 ## ⚠️ Mandatory: Update the Changelog in Supabase after every task
 
 After completing **any** code change in this repository, you **must** output a Supabase SQL statement to insert a new changelog entry into the `changelog_posts` table. The JSON changelog system (`changelog.json`) has been **fully removed** — Supabase is the **single source of truth** for all changelog data.
