@@ -104,7 +104,9 @@ export async function GET() {
     }
   }
 
-  const errorRate = rows.length > 0 ? Math.round((errorCount / rows.length) * 1000) / 10 : null;
+  // Convert to percent and round to one decimal place.
+  const errorRatePct = rows.length > 0 ? (errorCount / rows.length) * 100 : null;
+  const errorRate = errorRatePct !== null ? Math.round(errorRatePct * 10) / 10 : null;
   const avgResponseTimeMs = responseTimeCount > 0 ? Math.round(sumResponseTime / responseTimeCount) : null;
 
   return NextResponse.json({
