@@ -257,7 +257,7 @@ export function withApiAuth(handler: ApiHandler) {
           try {
             await deductApiKeyCredits(keyRecord.id, charge);
           } catch (err) {
-            console.warn("[api-middleware] Failed to deduct API key credits:", err);
+            console.warn(`[api-middleware] Failed to deduct API key credits for key ${keyRecord.id}:`, err);
           }
         });
       }

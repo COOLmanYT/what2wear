@@ -230,7 +230,7 @@ export default function ApiDashboardClient() {
                 <div key={key.id} className="flex items-center justify-between gap-3 p-3 rounded-xl" style={{ background: "var(--background)" }}>
                   <div>
                     <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>{key.key_preview}</p>
-                    <p className="text-xs mt-0.5" style={{ color: "var(--foreground)", opacity: 0.45 }}>
+                    <p className="text-xs mt-0.5" aria-label={`Created date ${new Date(key.created_at).toLocaleString(undefined, DATE_TIME_OPTIONS)}`} style={{ color: "var(--foreground)", opacity: 0.45 }}>
                       Created {new Date(key.created_at).toLocaleString(undefined, DATE_TIME_OPTIONS)}
                     </p>
                     <p className="text-xs mt-0.5" style={{ color: "var(--foreground)", opacity: 0.45 }}>
