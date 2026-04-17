@@ -231,7 +231,10 @@ export default function ApiDashboardClient() {
                   <div>
                     <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>{key.key_preview}</p>
                     <p className="text-xs mt-0.5" style={{ color: "var(--foreground)", opacity: 0.45 }}>
-                      Created {new Date(key.created_at).toLocaleString(undefined, DATE_TIME_OPTIONS)} · {key.revoked ? "Revoked" : "Active"}
+                      Created {new Date(key.created_at).toLocaleString(undefined, DATE_TIME_OPTIONS)}
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--foreground)", opacity: 0.45 }}>
+                      Status: <span aria-label={`API key status ${key.revoked ? "revoked" : "active"}`}>{key.revoked ? "Revoked" : "Active"}</span>
                     </p>
                     <p className="text-xs mt-0.5" style={{ color: "var(--foreground)", opacity: 0.45 }}>
                       Credits: {Math.max(0, Number(key.credits_remaining) || 0)} remaining · {Math.max(0, Number(key.credits_used) || 0)} used

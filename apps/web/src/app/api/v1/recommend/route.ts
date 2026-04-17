@@ -49,7 +49,7 @@ function kmhToMph(kmh: number): number {
 
 async function handleRecommend(
   req: NextRequest,
-  _ctx: ApiKeyContext
+  _ctx: ApiKeyContext  // eslint-disable-line @typescript-eslint/no-unused-vars
 ): Promise<NextResponse> {
   // 1. Parse and validate request body
   let body: RecommendBody;

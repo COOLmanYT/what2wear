@@ -19,9 +19,11 @@ export function normalizeApiUsageEndpoint(endpoint: string): string {
   const trimmed = endpoint.trim();
   if (trimmed.startsWith("/api/v1/")) {
     const segment = trimmed.split("/").filter(Boolean).pop() ?? "";
+    // Keep legacy support for pre-rename logs/clients that still report recweath.
     if (segment === "recweath") return "/recweather";
     return segment ? `/${segment}` : "";
   }
+  // Keep legacy support for pre-rename logs/clients that still report recweath.
   if (trimmed === "/recweath") return "/recweather";
   return trimmed;
 }

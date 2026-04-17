@@ -302,11 +302,10 @@ CREATE TABLE IF NOT EXISTS api_keys (
   key_hash    text        NOT NULL,
   key_preview text        NOT NULL,
   created_at  timestamptz NOT NULL DEFAULT now(),
-  revoked     boolean     NOT NULL DEFAULT false,
-  credits_remaining integer NOT NULL DEFAULT 100,
-  credits_used integer NOT NULL DEFAULT 0
+  revoked     boolean     NOT NULL DEFAULT false
 );
 
+-- Migration-safe credit fields for existing environments.
 ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS credits_remaining integer NOT NULL DEFAULT 100;
 ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS credits_used integer NOT NULL DEFAULT 0;
 
