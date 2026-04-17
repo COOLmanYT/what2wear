@@ -196,21 +196,29 @@ export default function HamburgerNav({
                     {homeExpanded ? "▲" : "▼"}
                   </span>
                 </button>
-                {homeExpanded && (
-                  <div className="pl-4 mt-1 space-y-0.5">
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setMenuOpen(false)}
+                 {homeExpanded && (
+                   <div className="pl-4 mt-1 space-y-0.5">
+                     <Link
+                       href="/dashboard"
+                       onClick={() => setMenuOpen(false)}
                       className="block rounded-xl px-3 py-2 text-sm btn-interact"
                       style={{ color: "var(--foreground)", opacity: 0.8 }}
                     >
                       Dashboard
                     </Link>
-                    <Link
-                      href="/closet"
-                      onClick={() => setMenuOpen(false)}
-                      className="block rounded-xl px-3 py-2 text-sm btn-interact"
-                      style={navItemStyle("closet")}
+                     <Link
+                       href="/dashboard/api"
+                       onClick={() => setMenuOpen(false)}
+                       className="block rounded-xl px-3 py-2 text-sm btn-interact"
+                       style={{ color: "var(--foreground)", opacity: 0.8 }}
+                     >
+                       🔐 API Dashboard
+                     </Link>
+                     <Link
+                       href="/closet"
+                       onClick={() => setMenuOpen(false)}
+                       className="block rounded-xl px-3 py-2 text-sm btn-interact"
+                       style={navItemStyle("closet")}
                     >
                       👕 Closet
                     </Link>
