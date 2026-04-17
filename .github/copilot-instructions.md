@@ -58,6 +58,7 @@ VALUES (
 - **DO NOT write to `changelog.json`** — the JSON changelog system is fully deprecated and removed.
 - **DO NOT use the JSON file as a fallback** — all changelog reads come from Supabase `changelog_posts`.
 - All completed tasks MUST output a Supabase SQL statement for the changelog.
+- At the end of a Agent Task series, you may be asked to "squash" or "merge" changelog entries. If possible, make 1 singular chanhelog entry consisting of all changes made in the entire Agent Task. 
 
 ---
 
