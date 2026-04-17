@@ -294,7 +294,53 @@ CREATE POLICY "Users can read own dev_messages"
   ON dev_messages FOR SELECT USING ((select auth.uid()) = user_id);
 
 -- ------------------------------------------------------------
--- 14. Changelog Posts (CMS — DB-driven, Markdown/Image)
+-- 14. API Keys (hashed, revocable)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS api_keys (
+  id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  key_hash    text        NOT NULL,
+  key_preview text        NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  revoked     boolean     NOT NULL DEFAULT false
+);
+
+ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can read own api_keys"
+  ON api_keys FOR SELECT USING ((select auth.uid()) = user_id);
+
+-- Index to make key_preview lookups fast (used on every API request)
+CREATE INDEX IF NOT EXISTS api_keys_key_preview_revoked_idx
+  ON api_keys (key_preview, revoked);
+
+-- RLS is row-level only; revoke key_hash from client roles so it stays server-only
+REVOKE SELECT ON TABLE api_keys FROM anon, authenticated;
+GRANT SELECT (id, user_id, key_preview, created_at, revoked)
+  ON api_keys TO authenticated;
+
+-- ------------------------------------------------------------
+-- 15. API Usage Logs (per-key request tracking for rate-limiting and analytics)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS api_usage_logs (
+  id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  api_key_id    uuid        NOT NULL REFERENCES api_keys(id) ON DELETE CASCADE,
+  endpoint      text        NOT NULL,
+  timestamp     timestamptz NOT NULL DEFAULT now(),
+  response_time integer,          -- milliseconds; NULL until response completes
+  status_code   integer     NOT NULL
+);
+
+-- Index for fast per-key time-window lookups (rate-limit check + analytics)
+CREATE INDEX IF NOT EXISTS idx_api_usage_logs_key_time
+  ON api_usage_logs (api_key_id, timestamp DESC);
+
+-- Service role has full access (used by API routes); deny all client roles by default
+ALTER TABLE api_usage_logs ENABLE ROW LEVEL SECURITY;
+-- No policies are created for api_usage_logs so client roles are denied by default.
+-- Service role access used by API routes remains unaffected.
+
+-- ------------------------------------------------------------
+-- 16. Changelog Posts (CMS — DB-driven, Markdown/Image)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS changelog_posts (
   id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -345,6 +391,19 @@ CREATE TABLE IF NOT EXISTS changelog_posts (
 --    ALTER TABLE changelog_posts
 --      ADD COLUMN IF NOT EXISTS large              boolean NOT NULL DEFAULT false,
 --      ADD COLUMN IF NOT EXISTS show_on_next_login boolean NOT NULL DEFAULT false;
+--
+-- v3.1.0: If your database was created before api_usage_logs was added, run:
+--
+--    CREATE TABLE IF NOT EXISTS api_usage_logs (
+--      id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+--      api_key_id    uuid        NOT NULL REFERENCES api_keys(id) ON DELETE CASCADE,
+--      endpoint      text        NOT NULL,
+--      timestamp     timestamptz NOT NULL DEFAULT now(),
+--      response_time integer,
+--      status_code   integer     NOT NULL
+--    );
+--    CREATE INDEX IF NOT EXISTS idx_api_usage_logs_key_time
+--      ON api_usage_logs (api_key_id, timestamp DESC);
 --
 -- ============================================================
 
