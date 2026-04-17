@@ -10,8 +10,7 @@ export default defineConfig({
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Platform Guide', link: '/markdown-examples' },
-      { text: 'API Guide', link: '/api-examples' },
-      { text: 'Archive', link: '/reference/vitepress-starter/archive' }
+      { text: 'API Reference', link: '/api/' },
     ],
 
     sidebar: [
@@ -20,8 +19,23 @@ export default defineConfig({
         items: [
           { text: 'Overview', link: '/' },
           { text: 'Platform Guide', link: '/markdown-examples' },
-          { text: 'API Guide', link: '/api-examples' },
-          { text: 'VitePress Starter Archive', link: '/reference/vitepress-starter/archive' }
+        ]
+      },
+      {
+        text: 'API Reference',
+        items: [
+          { text: 'Overview', link: '/api/' },
+          { text: 'Authentication', link: '/api/authentication' },
+          {
+            text: 'Endpoints',
+            items: [
+              { text: 'POST /recommend', link: '/api/recommend' },
+              { text: 'POST /recweather', link: '/api/recweather' },
+              { text: 'GET /weather', link: '/api/weather' },
+              { text: 'GET /closet', link: '/api/closet' },
+            ]
+          },
+          { text: 'Errors & Credits', link: '/api/errors' },
         ]
       }
     ],
@@ -35,8 +49,9 @@ export default defineConfig({
     },
 
     footer: {
-      message: 'Sky Style docs and API references are evolving with the product.',
-      copyright: 'Copyright 2026 Sky Style. Current WIP deployment: what2wear-two.vercel.app'
+      message: 'Sky Style API docs — always in sync with skystyle.app/api/v1',
+      copyright: 'Copyright 2026 Sky Style'
     }
   }
 })
+
