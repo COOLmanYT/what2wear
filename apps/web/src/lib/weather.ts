@@ -197,13 +197,15 @@ async function fetchOpenWeather(lat: number, lon: number, apiKey?: string): Prom
   const key = apiKey ? sanitizeApiKey(apiKey) : process.env.OPENWEATHER_API_KEY;
   if (!key) throw new Error("OPENWEATHER_API_KEY is not set");
 
+  const coordParams = new URLSearchParams({ lat: lat.toFixed(6), lon: lon.toFixed(6), appid: key, units: "metric" });
+  const forecastParams = new URLSearchParams({ lat: lat.toFixed(6), lon: lon.toFixed(6), cnt: "1", appid: key, units: "metric" });
   const [currentRes, forecastRes] = await Promise.all([
     fetch(
-      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${key}&units=metric`,
+      `https://api.openweathermap.org/data/2.5/weather?${coordParams}`,
       { next: { revalidate: 600 } }
     ),
     fetch(
-      `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&cnt=1&appid=${key}&units=metric`,
+      `https://api.openweathermap.org/data/2.5/forecast?${forecastParams}`,
       { next: { revalidate: 600 } }
     ),
   ]);
@@ -336,7 +338,8 @@ async function fetchWeatherApi(lat: number, lon: number, apiKey?: string): Promi
   const key = apiKey ? sanitizeApiKey(apiKey) : process.env.WEATHERAPI_KEY;
   if (!key) throw new Error("WEATHERAPI_KEY is not set");
 
-  const url = `https://api.weatherapi.com/v1/forecast.json?key=${key}&q=${lat},${lon}&days=1&aqi=no&alerts=no`;
+  const params = new URLSearchParams({ key, q: `${lat.toFixed(6)},${lon.toFixed(6)}`, days: "1", aqi: "no", alerts: "no" });
+  const url = `https://api.weatherapi.com/v1/forecast.json?${params}`;
   const res = await fetch(url, { next: { revalidate: 600 } });
   if (!res.ok) throw new Error(`WeatherAPI fetch failed: ${res.status}`);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -378,7 +381,10 @@ async function fetchVisualCrossing(lat: number, lon: number, apiKey?: string): P
   const key = apiKey ? sanitizeApiKey(apiKey) : process.env.VISUALCROSSING_API_KEY;
   if (!key) throw new Error("VISUALCROSSING_API_KEY is not set");
 
-  const url = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/today?unitGroup=metric&key=${key}&include=current,hours&contentType=json`;
+  const safeLat = encodeURIComponent(lat.toFixed(6));
+  const safeLon = encodeURIComponent(lon.toFixed(6));
+  const vcParams = new URLSearchParams({ unitGroup: "metric", key, include: "current,hours", contentType: "json" });
+  const url = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${safeLat},${safeLon}/today?${vcParams}`;
   const res = await fetch(url, { next: { revalidate: 600 } });
   if (!res.ok) throw new Error(`Visual Crossing fetch failed: ${res.status}`);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -421,7 +427,9 @@ async function fetchPirateWeather(lat: number, lon: number, apiKey?: string): Pr
   const key = apiKey ? sanitizeApiKey(apiKey) : process.env.PIRATEWEATHER_API_KEY;
   if (!key) throw new Error("PIRATEWEATHER_API_KEY is not set");
 
-  const url = `https://api.pirateweather.net/forecast/${key}/${lat},${lon}?units=ca`;
+  const safeLat = encodeURIComponent(lat.toFixed(6));
+  const safeLon = encodeURIComponent(lon.toFixed(6));
+  const url = `https://api.pirateweather.net/forecast/${key}/${safeLat},${safeLon}?units=ca`;
   const res = await fetch(url, { next: { revalidate: 600 } });
   if (!res.ok) throw new Error(`Pirate Weather fetch failed: ${res.status}`);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -460,7 +468,15 @@ async function fetchPirateWeather(lat: number, lon: number, apiKey?: string): Pr
 // ---------------------------------------------------------------------------
 
 async function fetchOpenMeteo(lat: number, lon: number): Promise<SourceWeatherData & { hourly: HourlyForecast[] }> {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m&forecast_days=1&timezone=auto`;
+  const omParams = new URLSearchParams({
+    latitude: lat.toFixed(6),
+    longitude: lon.toFixed(6),
+    current: "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m",
+    hourly: "temperature_2m,weather_code,precipitation_probability,wind_speed_10m",
+    forecast_days: "1",
+    timezone: "auto",
+  });
+  const url = `https://api.open-meteo.com/v1/forecast?${omParams}`;
   const res = await fetch(url, { next: { revalidate: 600 } });
   if (!res.ok) throw new Error(`Open-Meteo fetch failed: ${res.status}`);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
