@@ -5,48 +5,40 @@ layout: home
 hero:
   name: "Sky Style Docs"
   text: "Weather-aware outfit intelligence"
-  tagline: Product architecture, deployment guides, and API references
+  tagline: Platform guides, deployment references, and the official API documentation
   image:
     src: /images/dashboard-2.png
     alt: Sky Style dashboard preview
   actions:
     - theme: brand
-      text: Start with Platform Guide
-      link: /markdown-examples
+      text: API Reference
+      link: /api/
     - theme: alt
-      text: Open API Guide
-      link: /api-examples
+      text: Platform Guide
+      link: /markdown-examples
 
 features:
-  - title: Main Product App
-    details: Sky Style main app lives in apps/web and powers skystyle.app and preview deployments.
-  - title: Docs Website
-    details: This documentation site lives in apps/docs and is ready for docs.skystyle.app deployment.
-  - title: Future API Service
-    details: A placeholder exists in apps/api for api.skystyle.app, prepared for a staged rollout.
+  - title: AI Outfit API
+    details: Access AI-powered outfit recommendations via REST. Authenticate with an API key and POST coordinates to get an instant outfit suggestion.
+  - title: Weather Data API
+    details: Fetch real-time weather for any coordinates — temperature, humidity, UV index, wind, rain chance, and active alerts.
+  - title: Closet API
+    details: Read the closet of the key owner to build personalised integrations on top of the user's saved wardrobe.
 ---
-
-## Status
-
-Sky Style is currently in active build mode. The existing public web deployment remains:
-
-- https://what2wear-two.vercel.app
 
 ## Monorepo Layout
 
-- apps/web: Next.js production app
-- apps/docs: VitePress docs site
-- apps/api: Future standalone API scaffold
-- supabase: Schema and SQL assets
+- `apps/web` — Next.js production app (skystyle.app)
+- `apps/docs` — This VitePress documentation site
+- `apps/api` — Future standalone API scaffold
+- `supabase` — Schema and SQL assets
 
-## Recommended Reading Path
+## Quick links
 
-1. Platform Guide: product architecture, environments, and deployment basics
-2. API Guide: endpoint behavior and integration examples
-
-## Preserved Starter Templates
-
-The original VitePress generated examples are archived for future reference:
-
-- /reference/vitepress-starter/archive
+- [Authentication guide](/api/authentication)
+- [POST /recommend](/api/recommend)
+- [POST /recweather](/api/recweather)
+- [GET /weather](/api/weather)
+- [GET /closet](/api/closet)
+- [Errors & Credits](/api/errors)
 
