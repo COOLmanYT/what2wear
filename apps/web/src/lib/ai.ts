@@ -103,6 +103,112 @@ export interface StyleRecommendation {
   modelUsed?: string;
 }
 
+function decodeJsonLikeString(value: string): string {
+  const decodedParts: string[] = [];
+  for (let i = 0; i < value.length; i++) {
+    const char = value[i];
+    if (char !== "\\") {
+      decodedParts.push(char);
+      continue;
+    }
+    const next = value[i + 1];
+    if (next === undefined) break;
+    i++;
+    if (next === "n") decodedParts.push("\n");
+    else if (next === "r") decodedParts.push("\r");
+    else if (next === "t") decodedParts.push("\t");
+    else if (next === '"') decodedParts.push('"');
+    else if (next === "\\") decodedParts.push("\\");
+    else decodedParts.push(next);
+  }
+  return decodedParts.join("");
+}
+
+function extractJsonField(text: string, key: "outfit" | "reasoning"): string | null {
+  const keyIndex = text.indexOf(`"${key}"`);
+  if (keyIndex === -1) return null;
+  const colonIndex = text.indexOf(":", keyIndex);
+  if (colonIndex === -1) return null;
+  let start = colonIndex + 1;
+  while (start < text.length && /\s/.test(text[start])) {
+    start++;
+  }
+  if (text[start] !== '"') return null;
+  start++;
+  let escaped = false;
+  const valueParts: string[] = [];
+  for (let i = start; i < text.length; i++) {
+    const char = text[i];
+    if (escaped) {
+      valueParts.push(`\\${char}`);
+      escaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (char === '"') {
+      return decodeJsonLikeString(valueParts.join(""));
+    }
+    valueParts.push(char);
+  }
+  const decoded = decodeJsonLikeString(valueParts.join(""));
+  return decoded.trim() ? decoded : null;
+}
+
+function extractFirstJsonObject(text: string): string | null {
+  const start = text.indexOf("{");
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const char = text[i];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+    if (char === "{") depth++;
+    if (char === "}") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
+function parseRecommendationFromRaw(raw: string): Partial<StyleRecommendation> | null {
+  const tryParse = (candidate: string): Partial<StyleRecommendation> | null => {
+    if (!candidate.trim()) return null;
+    try {
+      return JSON.parse(candidate) as Partial<StyleRecommendation>;
+    } catch {
+      return null;
+    }
+  };
+
+  const trimmed = raw.trim();
+  const fencedMatch = trimmed.match(/```(?:\w+)?\s*\n?([\s\S]*?)\n?\s*```/);
+  const withoutFence = fencedMatch ? fencedMatch[1].trim() : trimmed;
+
+  return (
+    tryParse(withoutFence) ??
+    tryParse(extractFirstJsonObject(withoutFence) ?? "") ??
+    tryParse(extractFirstJsonObject(trimmed) ?? "")
+  );
+}
+
 function formatTemp(celsius: number, unit: "metric" | "imperial"): string {
   if (unit === "imperial") {
     const f = Math.round((celsius * 9) / 5 + 32);
@@ -391,27 +497,31 @@ async function callAI(
   // Log full AI output for server-side debugging
   console.log("[ai] Full AI response:", raw);
 
-  // Strip markdown code fences if present (e.g. ```json ... ```)
-  let cleaned = raw.trim();
-  const fenceMatch = cleaned.match(/^```(?:\w+)?\s*\n?([\s\S]*?)\n?\s*```$/);
-  if (fenceMatch) {
-    cleaned = fenceMatch[1].trim();
-  }
-
-  try {
-    const parsed = JSON.parse(cleaned) as Partial<StyleRecommendation>;
+  const parsed = parseRecommendationFromRaw(raw);
+  if (parsed) {
     return {
       outfit: parsed.outfit ?? "Unable to generate outfit recommendation.",
       reasoning: parsed.reasoning ?? "",
       modelUsed,
       ...(isDev ? { rawOutput: raw } : {}),
     };
-  } catch {
+  }
+
+  const partialOutfit = extractJsonField(raw, "outfit");
+  const partialReasoning = extractJsonField(raw, "reasoning");
+  if (partialOutfit || partialReasoning) {
     return {
-      outfit: "Unable to generate outfit recommendation.",
-      reasoning: cleaned,
+      outfit: partialOutfit ?? "Unable to generate outfit recommendation.",
+      reasoning: partialReasoning ?? "",
       modelUsed,
       ...(isDev ? { rawOutput: raw } : {}),
     };
   }
+
+  return {
+    outfit: "Unable to generate outfit recommendation.",
+    reasoning: raw.trim(),
+    modelUsed,
+    ...(isDev ? { rawOutput: raw } : {}),
+  };
 }
