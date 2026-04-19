@@ -42,10 +42,13 @@ Be specific (name garment types, colours, materials). Be friendly and concise. O
 
 const MAX_JSON_LEAD_IN_CHARS = 120;
 // Matches assistant lead-in prose that references "json" before the actual payload.
-const JSON_LEAD_IN_PATTERN = `(?:^|\\n)\\s*(?:here(?:'s| is)|below is|this is|sure|certainly|okay|ok)\\b[^\\n{}]{0,${MAX_JSON_LEAD_IN_CHARS}}\\bjson\\b[^\\n{}]{0,${MAX_JSON_LEAD_IN_CHARS}}(?::|-)?\\s*`;
+const JSON_LEAD_IN_PATTERN = `(?:^|\\n)\\s*(?:here(?:['’]s| is| are)|below is|this is|sure|certainly|okay|ok)\\b[^\\n{}]{0,${MAX_JSON_LEAD_IN_CHARS}}\\bjson\\b[^\\n{}]{0,${MAX_JSON_LEAD_IN_CHARS}}(?::|-)?\\s*`;
 const JSON_LEAD_IN_TEST_REGEX = new RegExp(JSON_LEAD_IN_PATTERN, "i");
 const JSON_LEAD_IN_REPLACE_REGEX = new RegExp(JSON_LEAD_IN_PATTERN, "gi");
-const JSON_LEAD_IN_AT_START_REGEX = new RegExp(`^\\s*(?:${JSON_LEAD_IN_PATTERN}|(?:the\\s+)?json\\s+(?:you\\s+)?requested\\s*(?::|-)?\\s*)`, "i");
+const JSON_LEAD_IN_AT_START_REGEX = new RegExp(
+  `^\\s*(?:(?:here(?:['’]s| is| are)|below is|this is|sure|certainly|okay|ok)\\b[^\\n{}]{0,${MAX_JSON_LEAD_IN_CHARS}}\\bjson\\b[^\\n{}]{0,${MAX_JSON_LEAD_IN_CHARS}}|(?:the\\s+)?json\\s+(?:you\\s+)?requested)\\s*(?::|-)?\\s*`,
+  "i"
+);
 
 /** Remove forbidden JSON lead-in phrasing from the start of a text field. */
 function stripForbiddenJsonLeadIn(value: string): string {
@@ -56,10 +59,12 @@ function stripForbiddenJsonLeadIn(value: string): string {
 /** Enforce JSON-only output by preferring the first JSON object over mixed prose+JSON content. */
 function enforceStrictJsonOnly(raw: string): string {
   const trimmed = raw.trim();
-  const extractedJson = extractFirstJsonObject(trimmed);
+  const extractedJson = extractFirstParsableJsonObject(trimmed, true);
   if (extractedJson && extractedJson.trim() !== trimmed) return extractedJson;
   if (!JSON_LEAD_IN_TEST_REGEX.test(trimmed)) return trimmed;
   if (extractedJson) return extractedJson;
+  const fallbackJson = extractFirstParsableJsonObject(trimmed);
+  if (fallbackJson) return fallbackJson;
   return trimmed.replace(JSON_LEAD_IN_REPLACE_REGEX, "").trim();
 }
 
@@ -221,6 +226,61 @@ function extractFirstJsonObject(text: string): string | null {
   return null;
 }
 
+function extractFirstParsableJsonObject(
+  text: string,
+  requireRecommendationFields = false
+): string | null {
+  let searchFrom = 0;
+  while (searchFrom < text.length) {
+    const start = text.indexOf("{", searchFrom);
+    if (start === -1) return null;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    let end = -1;
+    for (let i = start; i < text.length; i++) {
+      const char = text[i];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (char === "\\") escaped = true;
+        else if (char === '"') inString = false;
+        continue;
+      }
+      if (char === '"') {
+        inString = true;
+        continue;
+      }
+      if (char === "{") depth++;
+      if (char === "}") {
+        depth--;
+        if (depth === 0) {
+          end = i + 1;
+          break;
+        }
+      }
+    }
+    if (end === -1) return null;
+    const candidate = text.slice(start, end);
+    try {
+      const parsedUnknown = JSON.parse(candidate) as unknown;
+      if (!parsedUnknown || typeof parsedUnknown !== "object" || Array.isArray(parsedUnknown)) {
+        searchFrom = start + 1;
+        continue;
+      }
+      const parsed = parsedUnknown as Partial<StyleRecommendation>;
+      const hasRecommendationFields =
+        typeof parsed?.outfit === "string" || typeof parsed?.reasoning === "string";
+      if (!requireRecommendationFields || hasRecommendationFields) {
+        return candidate;
+      }
+    } catch {
+      // Try next balanced object.
+    }
+    searchFrom = start + 1;
+  }
+  return null;
+}
+
 function parseRecommendationFromRaw(raw: string): Partial<StyleRecommendation> | null {
   const tryParse = (candidate: string): Partial<StyleRecommendation> | null => {
     if (!candidate.trim()) return null;
@@ -237,6 +297,8 @@ function parseRecommendationFromRaw(raw: string): Partial<StyleRecommendation> |
 
   return (
     tryParse(withoutFence) ??
+    tryParse(extractFirstParsableJsonObject(withoutFence, true) ?? "") ??
+    tryParse(extractFirstParsableJsonObject(trimmed, true) ?? "") ??
     tryParse(extractFirstJsonObject(withoutFence) ?? "") ??
     tryParse(extractFirstJsonObject(trimmed) ?? "")
   );
