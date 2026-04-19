@@ -2312,7 +2312,7 @@ export default function Dashboard({
         </p>
         <p>
           <Link
-            href="https://github.com/COOLmanYT/what2wear"
+            href="https://github.com/COOLmanYT/skystyle"
             target="_blank"
             rel="noopener noreferrer"
             className="underline hover:opacity-70"

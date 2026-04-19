@@ -1,4 +1,4 @@
-# what2wear (Sky Style) 🌤️
+# skystyle (Sky Style) 🌤️
 
 AI-powered outfit recommendations based on hyper-local weather data. Never overdress or underdress again.
 

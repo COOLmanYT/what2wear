@@ -43,7 +43,7 @@ export default defineConfig({
     ],
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/COOLmanYT/what2wear' }
+      { icon: 'github', link: 'https://github.com/COOLmanYT/skystyle' }
     ],
 
     search: {
