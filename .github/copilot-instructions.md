@@ -8,6 +8,8 @@ This is for the changelog version number. **Update this version number according
 
 After completing **any** code change in this repository, you **must** output a Supabase SQL statement to insert a new changelog entry into the `changelog_posts` table. The JSON changelog system (`changelog.json`) has been **fully removed** — Supabase is the **single source of truth** for all changelog data.
 
+You do not need to do this **only if** user says so. For example, if the user says "just fix the typo in `README.md` and no changelog entry is needed", then you can skip the changelog update. But for any non-trivial change, always update the changelog in Supabase.
+
 ### SQL statement format
 
 ```sql
@@ -58,7 +60,7 @@ VALUES (
 - **DO NOT write to `changelog.json`** — the JSON changelog system is fully deprecated and removed.
 - **DO NOT use the JSON file as a fallback** — all changelog reads come from Supabase `changelog_posts`.
 - All completed tasks MUST output a Supabase SQL statement for the changelog.
-- At the end of a Agent Task series, you may be asked to "squash" or "merge" changelog entries. If possible, make 1 singular chanhelog entry consisting of all changes made in the entire Agent Task. 
+- At the end of a Agent Task series, you may be asked to "squash" or "merge" changelog entries. If possible, make 1 singular changelog entry consisting of all changes made in the entire Agent Task. 
 
 ---
 
